@@ -64,6 +64,18 @@ No celular físico, use o **IP da sua máquina na rede** em `EXPO_PUBLIC_API_URL
 
 Para gerar o app instalável (APK/AAB/IPA): `npx eas-cli@latest build`.
 
+### Demonstração no navegador (GitHub Pages)
+
+A pasta `docs/` tem uma versão de demonstração que funciona sem servidor: contas e progresso ficam salvos só no aparelho, e o Tutor IA e os vídeos mostram mensagens de demonstração. Para publicar: GitHub → **Settings → Pages → Deploy from a branch**, escolha a branch e a pasta `/docs`. O endereço fica `https://<usuario>.github.io/input-ai/`.
+
+Para gerar de novo:
+
+```bash
+cd mobile
+EXPO_PUBLIC_DEMO=1 EXPO_BASE_URL=/input-ai npx expo export --platform web --output-dir ../docs
+touch ../docs/.nojekyll && cp ../docs/index.html ../docs/404.html
+```
+
 ### Versão web num endereço só (teste no navegador do celular)
 
 ```bash
