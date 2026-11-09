@@ -12,7 +12,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { adminDeleteUser, adminListUsers, adminSetRole, User } from "../lib/api";
+import { adminDeleteUser, adminListUsers, adminSetRole, adminUso, User, UsoAdmin } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import { nomeSerie } from "../lib/serie";
 import { colors, radius } from "../lib/theme";
@@ -34,12 +34,16 @@ export default function Admin() {
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [busca, setBusca] = useState("");
+  const [uso, setUso] = useState<UsoAdmin | null>(null);
 
   const carregar = useCallback(async () => {
     setErro(null);
     try {
       const { users: u } = await adminListUsers();
       setUsers(u.sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+      adminUso()
+        .then(setUso)
+        .catch(() => setUso(null));
     } catch (e) {
       setErro((e as Error).message);
     } finally {
@@ -107,6 +111,7 @@ export default function Admin() {
             <Stat value={admins} label="admins" />
             <Stat value={novos7d} label="novos (7 dias)" />
           </View>
+          {uso && <UsoTutor uso={uso} />}
           <View style={styles.search}>
             <Ionicons name="search" size={18} color={colors.primary} />
             <TextInput
@@ -143,6 +148,7 @@ export default function Admin() {
               <Text style={styles.meta}>
                 {u.role === "admin" ? "🛡️ Admin" : `🎒 ${nomeSerie(u.serie)}`} · desde{" "}
                 {new Date(u.createdAt).toLocaleDateString("pt-BR")}
+                {uso?.porUsuarioHoje[u.id] ? ` · ✨ ${uso.porUsuarioHoje[u.id]} hoje` : ""}
               </Text>
             </View>
             {!souEu && (
@@ -174,6 +180,36 @@ export default function Admin() {
   );
 }
 
+// Uso do Tutor IA: hoje e últimos 7 dias (perguntas), para acompanhar o custo.
+function UsoTutor({ uso }: { uso: UsoAdmin }) {
+  const hoje = uso.dias[uso.dias.length - 1];
+  const max = Math.max(1, ...uso.dias.map((d) => d.perguntas));
+  const semana = uso.dias.reduce((s, d) => s + d.perguntas, 0);
+  return (
+    <View style={styles.uso}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+        <Ionicons name="sparkles" size={18} color={colors.primary} />
+        <Text style={styles.usoTitle}>Uso do Tutor IA</Text>
+      </View>
+      <Text style={styles.usoSub}>
+        Hoje: {hoje?.perguntas ?? 0} pergunta{hoje?.perguntas === 1 ? "" : "s"} de {hoje?.alunos ?? 0} aluno
+        {hoje?.alunos === 1 ? "" : "s"} · 7 dias: {semana} · limite por aluno:{" "}
+        {uso.limite > 0 ? `${uso.limite}/dia` : "sem limite"}
+      </Text>
+      <View style={styles.usoBars}>
+        {uso.dias.map((d) => (
+          <View key={d.dia} style={{ flex: 1, alignItems: "center", gap: 4 }}>
+            <View style={styles.usoTrack}>
+              <View style={[styles.usoFill, { height: `${(d.perguntas / max) * 100}%` }]} />
+            </View>
+            <Text style={styles.usoDia}>{d.dia.slice(8, 10)}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
 function Stat({ value, label }: { value: number; label: string }) {
   return (
     <View style={styles.stat}>
@@ -184,6 +220,26 @@ function Stat({ value, label }: { value: number; label: string }) {
 }
 
 const styles = StyleSheet.create({
+  uso: {
+    borderRadius: radius.lg,
+    padding: 14,
+    backgroundColor: colors.bgSoft,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+  },
+  usoTitle: { color: colors.text, fontWeight: "900", fontSize: 16 },
+  usoSub: { color: colors.muted, fontSize: 12, marginTop: 4, lineHeight: 17 },
+  usoBars: { flexDirection: "row", gap: 6, marginTop: 12, height: 70, alignItems: "flex-end" },
+  usoTrack: {
+    width: "70%",
+    height: 52,
+    justifyContent: "flex-end",
+    backgroundColor: colors.primarySoft,
+    borderRadius: 6,
+    overflow: "hidden",
+  },
+  usoFill: { width: "100%", backgroundColor: colors.primary, borderRadius: 6 },
+  usoDia: { color: colors.muted, fontSize: 10, fontWeight: "700" },
   stats: { flexDirection: "row", gap: 10 },
   stat: {
     flex: 1,

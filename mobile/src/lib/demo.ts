@@ -123,6 +123,7 @@ export async function demoRequest(
   path: string,
   init: RequestInit | undefined,
   token: string | null,
+  onText?: (texto: string) => void,
 ): Promise<unknown> {
   await new Promise((r) => setTimeout(r, 150)); // simula a rede
   const db = await load();
@@ -247,7 +248,22 @@ export async function demoRequest(
 
   if (p === "/api/tutor" && method === "POST") {
     needAuth();
-    return { reply: await tutorViaClaude(body) };
+    return { reply: await tutorViaClaude(body, onText), restantes: null };
+  }
+
+  if (p === "/api/tutor/uso") {
+    needAuth();
+    return { usadas: 0, limite: null, restantes: null };
+  }
+
+  if (p === "/api/admin/uso") {
+    const hojeISO = new Date().toISOString().slice(0, 10);
+    return {
+      dias: [{ dia: hojeISO, perguntas: 0, alunos: 0, entrada: 0, saida: 0 }],
+      porUsuarioHoje: {},
+      limite: 0,
+      modelo: "Claude do próprio aluno (demonstração)",
+    };
   }
 
   if (p === "/api/videos") {
@@ -300,7 +316,7 @@ const MSG_ERRO: Record<string, string> = {
   prompt_too_large: "A conversa ficou muito longa. Saia e volte ao Tutor para começar de novo.",
 };
 
-async function tutorViaClaude(body: { messages?: MsgIn[]; mode?: string }) {
+async function tutorViaClaude(body: { messages?: MsgIn[]; mode?: string }, onText?: (t: string) => void) {
   const sample = await obterSample();
   if (!sample) {
     throw new DemoError(
@@ -329,6 +345,7 @@ async function tutorViaClaude(body: { messages?: MsgIn[]; mode?: string }) {
   });
 
   const opts: Record<string, unknown> = { cache: false };
+  if (onText) opts.onText = ({ text }: { text: string }) => onText(text);
   if (ultima?.image?.base64) {
     const lim = await sample.limits?.().catch(() => null);
     if (!lim?.images) throw new DemoError(MSG_ERRO.images_unavailable, 400);

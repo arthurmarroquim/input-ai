@@ -16,7 +16,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { askTutor, ChatImage, ChatMessage, TutorMode } from "../../lib/api";
+import { askTutor, ChatImage, ChatMessage, getTutorUso, TutorMode } from "../../lib/api";
 import { colors, gradient, radius, shadow } from "../../lib/theme";
 
 const BOAS_VINDAS: ChatMessage = {
@@ -53,6 +53,16 @@ export default function Tutor() {
   const [modo, setModo] = useState<TutorMode>("dica");
   const [enviando, setEnviando] = useState(false);
   const listRef = useRef<FlatList<ChatMessage>>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const [restantes, setRestantes] = useState<number | null>(null);
+
+  // Quantas perguntas o aluno ainda pode fazer hoje; e para de gerar se sair da tela.
+  useEffect(() => {
+    getTutorUso()
+      .then((u) => setRestantes(u.restantes))
+      .catch(() => {});
+    return () => abortRef.current?.abort();
+  }, []);
 
   useEffect(() => {
     if (assunto) setTexto(`Tenho uma dúvida sobre a aula "${assunto}": `);
@@ -99,15 +109,26 @@ export default function Tutor() {
     setTexto("");
     setImagem(null);
     setEnviando(true);
+    // A resposta aparece aos poucos numa mensagem que vai sendo preenchida.
+    const respostaId = uid();
+    setMessages((prev) => [...prev, { id: respostaId, role: "assistant", text: "" }]);
+    const atualizar = (t: string) =>
+      setMessages((prev) => prev.map((m) => (m.id === respostaId ? { ...m, text: t } : m)));
+    const ctl = new AbortController();
+    abortRef.current = ctl;
     try {
       // A mensagem de boas-vindas é só local; não vai para a IA.
-      const reply = await askTutor(
+      const { reply, restantes: r } = await askTutor(
         historico.filter((m) => m.id !== "welcome"),
         modo,
+        atualizar,
+        ctl.signal,
       );
-      setMessages((prev) => [...prev, { id: uid(), role: "assistant", text: reply }]);
+      atualizar(reply);
+      if (r !== null) setRestantes(r);
     } catch (e) {
-      setMessages((prev) => [...prev, { id: uid(), role: "assistant", text: `⚠️ ${(e as Error).message}` }]);
+      if ((e as Error).name === "AbortError") return;
+      atualizar(`⚠️ ${(e as Error).message}`);
     } finally {
       setEnviando(false);
     }
@@ -141,20 +162,31 @@ export default function Tutor() {
         })}
       </View>
 
+      {restantes !== null && (
+        <Text style={[styles.restantes, restantes <= 5 && { color: "#C2365B" }]}>
+          {restantes > 0
+            ? `💬 ${restantes} pergunta${restantes === 1 ? "" : "s"} restante${restantes === 1 ? "" : "s"} hoje`
+            : "Você usou todas as perguntas de hoje. Volte amanhã! 🌙"}
+        </Text>
+      )}
+
       <FlatList
         ref={listRef}
-        data={messages}
+        data={messages.filter((m) => m.text || m.image)}
         keyExtractor={(m) => m.id}
         contentContainerStyle={{ padding: 16, gap: 12 }}
         onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
         renderItem={({ item }) => <Bubble msg={item} />}
         ListFooterComponent={
           <>
-            {enviando && (
+            {enviando && !messages[messages.length - 1]?.text && (
               <View style={[styles.row, { marginTop: 12 }]}>
                 <Avatar />
-                <View style={[styles.bubble, styles.bot]}>
+                <View
+                  style={[styles.bubble, styles.bot, { flexDirection: "row", alignItems: "center", gap: 8 }]}
+                >
                   <ActivityIndicator color={colors.primary} />
+                  <Text style={{ color: colors.muted }}>Pensando…</Text>
                 </View>
               </View>
             )}
@@ -273,6 +305,7 @@ function RichText({ text, color }: { text: string; color: string }) {
 }
 
 const styles = StyleSheet.create({
+  restantes: { textAlign: "center", color: colors.muted, fontSize: 12, fontWeight: "700", marginTop: 8 },
   modeBar: {
     flexDirection: "row",
     marginHorizontal: 16,

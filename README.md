@@ -83,6 +83,32 @@ cd mobile && npx expo export --platform web --output-dir ../web-build
 cd ../server && WEB_DIR=../web-build npm start   # app e API em http://SEU_IP:3333
 ```
 
+## Colocar no ar (versão final)
+
+A versão final usa o servidor (`server/`) com a chave da Anthropic. O Tutor IA responde aos poucos (streaming), adapta as explicações à série do aluno, tem limite diário de perguntas por aluno (`TUTOR_LIMITE_DIARIO`, padrão 40) e o uso aparece no painel do administrador.
+
+### 1. Servidor na internet (Render)
+
+1. Crie uma chave em [console.anthropic.com](https://console.anthropic.com) (e, se quiser vídeos, uma chave da YouTube Data API v3).
+2. No [Render](https://render.com): **New → Blueprint** e escolha este repositório. O arquivo `render.yaml` já configura tudo, inclusive um disco para guardar usuários e progresso (o disco exige um plano pago).
+3. Preencha `ANTHROPIC_API_KEY`, `ADMIN_PASSWORD` e, se tiver, `YOUTUBE_API_KEY`.
+4. Quando terminar, abra `https://<seu-servico>.onrender.com/api/health`: deve mostrar `"ai": true`.
+
+Também há um `server/Dockerfile` para qualquer hospedagem com Docker (monte um volume em `/data`).
+
+### 2. App instalável (EAS)
+
+1. Em `mobile/eas.json`, confira se `EXPO_PUBLIC_API_URL` (perfis `preview` e `production`) é o endereço do seu servidor.
+2. Gere o APK para Android e instale/compartilhe pelo link que o EAS mostrar:
+
+```bash
+cd mobile
+npx eas-cli@latest login
+npx eas-cli@latest build --profile preview --platform android
+```
+
+Para as lojas (Google Play / App Store): `npx eas-cli@latest build --profile production` e depois `npx eas-cli@latest submit`.
+
 ## Endpoints da API
 
 Tutor e vídeos exigem login (`Authorization: Bearer <token>`).
@@ -93,7 +119,8 @@ Tutor e vídeos exigem login (`Authorization: Bearer <token>`).
 - Admin: `GET /api/admin/users`, `PATCH /api/admin/users/:id` `{ role: "aluno" | "admin" }`, `DELETE /api/admin/users/:id`
 
 - `GET /api/health`: diz quais integrações estão configuradas.
-- `POST /api/tutor`: `{ mode: "dica" | "explicar", messages: [{ role, text, image?: { base64, mediaType } }] }` → `{ reply }`
+- `GET /api/tutor/uso` → perguntas usadas e restantes hoje; admin: `GET /api/admin/uso` (últimos 7 dias)
+- `POST /api/tutor` (ou `POST /api/tutor?stream=1` para receber a resposta aos poucos, em Server-Sent Events): `{ mode: "dica" | "explicar", messages: [{ role, text, image?: { base64, mediaType } }] }` → `{ reply }`
 - `GET /api/videos?tipo=short|aula&q=assunto` → `{ items: [{ id, title, channel, thumbnail }] }`
 
 O tutor usa o modelo `claude-opus-5-5` com raciocínio adaptativo e fallback automático do servidor caso uma resposta seja recusada.

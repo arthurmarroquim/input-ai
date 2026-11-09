@@ -228,3 +228,48 @@ export async function setTopic(userId, topicId, status) {
   await persist();
   return null;
 }
+
+// ---------- Uso do Tutor IA (controle de custo) ----------
+// db.usage = { "AAAA-MM-DD": { [userId]: { perguntas, entrada, saida } } }  (tokens da API)
+const FUSO = process.env.TZ_ESCOLA || "America/Recife";
+export const hoje = () => new Date().toLocaleDateString("sv-SE", { timeZone: FUSO });
+
+export function usoDoDia(userId, dia = hoje()) {
+  return db.usage?.[dia]?.[userId] ?? { perguntas: 0, entrada: 0, saida: 0 };
+}
+
+export async function registrarUso(userId, { entrada = 0, saida = 0 }) {
+  db.usage ??= {};
+  const dia = hoje();
+  db.usage[dia] ??= {};
+  const u = (db.usage[dia][userId] ??= { perguntas: 0, entrada: 0, saida: 0 });
+  u.perguntas += 1;
+  u.entrada += entrada;
+  u.saida += saida;
+  // guarda só os últimos 60 dias
+  const dias = Object.keys(db.usage).sort();
+  for (const d of dias.slice(0, Math.max(0, dias.length - 60))) delete db.usage[d];
+  await persist();
+  return u;
+}
+
+/** Resumo para o painel do administrador: últimos 7 dias e uso de hoje por aluno. */
+export function resumoUso() {
+  const dias = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(Date.now() - i * 86_400_000).toLocaleDateString("sv-SE", { timeZone: FUSO });
+    const porUser = db.usage?.[d] ?? {};
+    const vals = Object.values(porUser);
+    dias.push({
+      dia: d,
+      perguntas: vals.reduce((s, v) => s + v.perguntas, 0),
+      alunos: vals.length,
+      entrada: vals.reduce((s, v) => s + v.entrada, 0),
+      saida: vals.reduce((s, v) => s + v.saida, 0),
+    });
+  }
+  const porUsuarioHoje = Object.fromEntries(
+    Object.entries(db.usage?.[hoje()] ?? {}).map(([id, v]) => [id, v.perguntas]),
+  );
+  return { dias, porUsuarioHoje };
+}

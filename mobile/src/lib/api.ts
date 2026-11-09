@@ -1,4 +1,5 @@
 import { Platform } from "react-native";
+import { fetch as expoFetch } from "expo/fetch";
 import { DEMO, DemoError, demoRequest } from "./demo";
 
 // Comunicação com o backend do ENSINA A.I (pasta /server).
@@ -100,15 +101,98 @@ export const adminDeleteUser = (id: string) =>
   request<{ ok: true }>(`/api/admin/users/${id}`, { method: "DELETE" });
 
 // ---------- Tutor e vídeos ----------
-export async function askTutor(messages: ChatMessage[], mode: TutorMode): Promise<string> {
+export type TutorResult = { reply: string; restantes: number | null };
+
+/**
+ * Pergunta ao Tutor IA. Com `onText`, a resposta chega aos poucos (streaming): `onText`
+ * recebe o texto inteiro escrito até agora. Resolve com a resposta final.
+ */
+export async function askTutor(
+  messages: ChatMessage[],
+  mode: TutorMode,
+  onText?: (textoAteAgora: string) => void,
+  signal?: AbortSignal,
+): Promise<TutorResult> {
   const payload = messages.map((m) => ({
     role: m.role,
     text: m.text,
     image: m.image ? { base64: m.image.base64, mediaType: m.image.mediaType } : undefined,
   }));
-  const data = await post<{ reply: string }>("/api/tutor", { messages: payload, mode });
-  return data.reply;
+  const body = JSON.stringify({ messages: payload, mode });
+
+  if (DEMO) {
+    try {
+      return (await demoRequest("/api/tutor", { method: "POST", body }, authToken, onText)) as TutorResult;
+    } catch (e) {
+      throw new ApiError((e as Error).message, e instanceof DemoError ? e.status : 500);
+    }
+  }
+  if (!onText) {
+    const data = await post<{ reply: string; restantes?: number | null }>("/api/tutor", {
+      messages: payload,
+      mode,
+    });
+    return { reply: data.reply, restantes: data.restantes ?? null };
+  }
+
+  // Streaming (Server-Sent Events). expo/fetch lê a resposta aos poucos também no celular.
+  let res: Awaited<ReturnType<typeof expoFetch>>;
+  try {
+    res = await expoFetch(`${API_URL}/api/tutor?stream=1`, {
+      method: "POST",
+      body,
+      signal,
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "text/event-stream",
+        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+      },
+    });
+  } catch (e) {
+    if ((e as Error).name === "AbortError") throw e;
+    throw new ApiError(`Não consegui conectar ao servidor (${API_URL}). Ele está ligado?`, 0);
+  }
+  if (!res.ok || !res.body) {
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    if (res.status === 401) onUnauthorized?.();
+    throw new ApiError(data.error || `Erro ${res.status}`, res.status);
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let final: TutorResult | null = null;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    let idx;
+    while ((idx = buffer.indexOf("\n\n")) !== -1) {
+      const raw = buffer.slice(0, idx);
+      buffer = buffer.slice(idx + 2);
+      const evento = /^event: (.*)$/m.exec(raw)?.[1];
+      const dados = /^data: (.*)$/m.exec(raw)?.[1];
+      if (!evento || !dados) continue;
+      const json = JSON.parse(dados);
+      if (evento === "delta") onText(json.text);
+      else if (evento === "done") final = { reply: json.reply, restantes: json.restantes ?? null };
+      else if (evento === "error") throw new ApiError(json.error, 502);
+    }
+  }
+  if (!final) throw new ApiError("A resposta foi interrompida. Tente de novo.", 502);
+  return final;
 }
+
+export const getTutorUso = () =>
+  request<{ usadas: number; limite: number | null; restantes: number | null }>("/api/tutor/uso");
+
+export type UsoAdmin = {
+  dias: { dia: string; perguntas: number; alunos: number; entrada: number; saida: number }[];
+  porUsuarioHoje: Record<string, number>;
+  limite: number;
+  modelo: string;
+};
+export const adminUso = () => request<UsoAdmin>("/api/admin/uso");
 
 export async function searchVideos(q: string, tipo: "short" | "aula"): Promise<Video[]> {
   const data = await request<{ items: Video[] }>(`/api/videos?tipo=${tipo}&q=${encodeURIComponent(q)}`);

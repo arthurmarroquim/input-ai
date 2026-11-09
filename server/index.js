@@ -8,7 +8,9 @@ import path from "node:path";
 import * as auth from "./auth.js";
 
 const PORT = Number(process.env.PORT || 3333);
-const MODEL = "claude-opus-5-5";
+const MODEL = process.env.TUTOR_MODEL || "claude-opus-5-5";
+// Perguntas por aluno por dia (administradores não têm limite). 0 = sem limite.
+const LIMITE_DIARIO = Number(process.env.TUTOR_LIMITE_DIARIO ?? 40);
 const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY || "";
 const hasAnthropicCredentials = Boolean(
   process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN,
@@ -16,6 +18,8 @@ const hasAnthropicCredentials = Boolean(
 
 const anthropic = new Anthropic();
 const app = express();
+// Atrás do proxy da hospedagem (Render, Railway…): usa o IP real do aluno no limite de tentativas.
+app.set("trust proxy", 1);
 app.use(express.json({ limit: "15mb" }));
 
 // CORS liberado para o app (Expo Go / web) conseguir chamar o servidor.
@@ -174,6 +178,10 @@ app.get("/api/admin/users", requireAuth, requireAdmin, (_req, res) => {
   res.json({ users: auth.listUsers() });
 });
 
+app.get("/api/admin/uso", requireAuth, requireAdmin, (_req, res) => {
+  res.json({ ...auth.resumoUso(), limite: LIMITE_DIARIO, modelo: MODEL });
+});
+
 app.patch("/api/admin/users/:id", requireAuth, requireAdmin, async (req, res) => {
   const role = req.body?.role;
   if (!["aluno", "admin"].includes(role)) return res.status(400).json({ error: "Papel inválido." });
@@ -198,8 +206,28 @@ app.get("/api/health", (_req, res) => {
   res.json({ ok: true, ai: hasAnthropicCredentials, youtube: Boolean(YOUTUBE_API_KEY) });
 });
 
+const SERIE_TEXTO = {
+  1: "está no 1º ano do Ensino Médio (prepara-se também para o SSA 1 da UPE)",
+  2: "está no 2º ano do Ensino Médio (prepara-se também para o SSA 2 da UPE)",
+  3: "está no 3º ano do Ensino Médio (prepara-se para o ENEM e o SSA 3 da UPE)",
+  concluido: "já concluiu o Ensino Médio ou faz cursinho (foco no ENEM e vestibulares)",
+};
+
+function erroDaIA(error) {
+  if (error instanceof Anthropic.AuthenticationError)
+    return [503, "Servidor sem chave da IA configurada (ANTHROPIC_API_KEY)."];
+  if (error instanceof Anthropic.RateLimitError) return [429, "Muitas perguntas ao mesmo tempo. Espere alguns segundos."];
+  if (error instanceof Anthropic.BadRequestError)
+    return [400, "Não consegui ler essa mensagem ou imagem. Tente outra foto."];
+  if (error instanceof Anthropic.APIError) return [502, "A IA está indisponível agora. Tente novamente."];
+  return [500, "Erro inesperado no servidor."];
+}
+
+// POST /api/tutor            → resposta inteira em JSON: { reply, restantes }
+// POST /api/tutor?stream=1   → Server-Sent Events: "delta" { text } (texto até agora), "done" { reply, restantes }, "error" { error }
 app.post("/api/tutor", requireAuth, async (req, res) => {
   const { messages, mode } = req.body || {};
+  const streaming = req.query.stream === "1";
   if (!Array.isArray(messages) || messages.length === 0) {
     return res.status(400).json({ error: "Envie ao menos uma mensagem." });
   }
@@ -208,8 +236,24 @@ app.post("/api/tutor", requireAuth, async (req, res) => {
     return res.status(400).json({ error: "A última mensagem precisa ser do aluno." });
   }
 
+  // Limite diário por aluno (controle de custo)
+  const ilimitado = req.user.role === "admin" || LIMITE_DIARIO <= 0;
+  const usadas = auth.usoDoDia(req.user.id).perguntas;
+  if (!ilimitado && usadas >= LIMITE_DIARIO) {
+    return res.status(429).json({
+      error: `Você já fez ${LIMITE_DIARIO} perguntas hoje. O limite renova amanhã. Enquanto isso, revise com as técnicas de estudo! 📚`,
+      restantes: 0,
+    });
+  }
+
+  // O tutor adapta a linguagem e os exemplos à série do aluno
+  const sobreAluno = SERIE_TEXTO[req.user.serie]
+    ? `\n\nSobre o aluno: ${req.user.name.split(" ")[0]} ${SERIE_TEXTO[req.user.serie]}. Ajuste o nível das explicações e dos exemplos a essa etapa.`
+    : "";
+
+  let stream;
   try {
-    const stream = anthropic.beta.messages.stream({
+    stream = anthropic.beta.messages.stream({
       model: MODEL,
       max_tokens: 16000,
       thinking: { type: "adaptive" },
@@ -217,39 +261,75 @@ app.post("/api/tutor", requireAuth, async (req, res) => {
       // Se o modelo recusar por segurança, o servidor da Anthropic tenta outro modelo automaticamente.
       betas: ["server-side-fallback-2026-07-01"],
       fallbacks: "default",
-      system: SYSTEM_PROMPT,
+      system: SYSTEM_PROMPT + sobreAluno,
       messages: toClaudeMessages(history, mode),
     });
-    const response = await stream.finalMessage();
+  } catch (error) {
+    console.error("[tutor]", error);
+    const [st, msg] = erroDaIA(error);
+    return res.status(st).json({ error: msg });
+  }
 
-    if (response.stop_reason === "refusal") {
-      return res.json({
-        reply:
-          "Desculpe, não consigo ajudar com esse pedido. Que tal me mandar uma dúvida de alguma matéria? 📚",
-      });
-    }
-    const reply = response.content
+  const enviar = (evento, dados) => res.write(`event: ${evento}\ndata: ${JSON.stringify(dados)}\n\n`);
+  if (streaming) {
+    res.writeHead(200, {
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+      "X-Accel-Buffering": "no",
+    });
+    enviar("status", { status: "pensando" });
+    let texto = "";
+    stream.on("text", (delta) => {
+      texto += delta;
+      enviar("delta", { text: texto });
+    });
+  }
+  // Se o aluno sair da tela, para de gerar (e de gastar).
+  res.on("close", () => {
+    if (!res.writableFinished) stream.abort();
+  });
+
+  try {
+    const response = await stream.finalMessage();
+    let reply = response.content
       .filter((b) => b.type === "text")
       .map((b) => b.text)
       .join("\n")
       .trim();
-    return res.json({ reply: reply || "Não consegui gerar uma resposta. Tente perguntar de outro jeito." });
+    if (response.stop_reason === "refusal" || !reply) {
+      reply =
+        response.stop_reason === "refusal"
+          ? "Desculpe, não consigo ajudar com esse pedido. Que tal me mandar uma dúvida de alguma matéria? 📚"
+          : "Não consegui gerar uma resposta. Tente perguntar de outro jeito.";
+    }
+    const uso = await auth.registrarUso(req.user.id, {
+      entrada: response.usage?.input_tokens ?? 0,
+      saida: response.usage?.output_tokens ?? 0,
+    });
+    const restantes = ilimitado ? null : Math.max(0, LIMITE_DIARIO - uso.perguntas);
+    if (streaming) {
+      enviar("done", { reply, restantes });
+      return res.end();
+    }
+    return res.json({ reply, restantes });
   } catch (error) {
+    if (res.destroyed) return; // aluno saiu da tela
     console.error("[tutor]", error);
-    if (error instanceof Anthropic.AuthenticationError) {
-      return res.status(503).json({ error: "Servidor sem chave da IA configurada (ANTHROPIC_API_KEY)." });
+    const [st, msg] = erroDaIA(error);
+    if (streaming) {
+      enviar("error", { error: msg });
+      return res.end();
     }
-    if (error instanceof Anthropic.RateLimitError) {
-      return res.status(429).json({ error: "Muitas perguntas ao mesmo tempo. Espere alguns segundos." });
-    }
-    if (error instanceof Anthropic.BadRequestError) {
-      return res.status(400).json({ error: "Não consegui ler essa mensagem ou imagem. Tente outra foto." });
-    }
-    if (error instanceof Anthropic.APIError) {
-      return res.status(502).json({ error: "A IA está indisponível agora. Tente novamente." });
-    }
-    return res.status(500).json({ error: "Erro inesperado no servidor." });
+    return res.status(st).json({ error: msg });
   }
+});
+
+// Uso do Tutor IA hoje (para o aluno ver quantas perguntas ainda tem)
+app.get("/api/tutor/uso", requireAuth, (req, res) => {
+  const ilimitado = req.user.role === "admin" || LIMITE_DIARIO <= 0;
+  const usadas = auth.usoDoDia(req.user.id).perguntas;
+  res.json({ usadas, limite: ilimitado ? null : LIMITE_DIARIO, restantes: ilimitado ? null : Math.max(0, LIMITE_DIARIO - usadas) });
 });
 
 app.get("/api/videos", requireAuth, async (req, res) => {
@@ -322,6 +402,7 @@ await auth.ensureAdmin();
 
 app.listen(PORT, () => {
   console.log(`ENSINA A.I API rodando em http://localhost:${PORT}`);
+  console.log(`Tutor IA: modelo ${MODEL}, limite ${LIMITE_DIARIO > 0 ? `${LIMITE_DIARIO} perguntas/aluno/dia` : "sem limite"}`);
   if (!hasAnthropicCredentials) console.warn("⚠️  ANTHROPIC_API_KEY não definida — o Tutor IA não vai responder.");
   if (!YOUTUBE_API_KEY) console.warn("⚠️  YOUTUBE_API_KEY não definida — a busca de vídeos ficará desativada.");
 });
