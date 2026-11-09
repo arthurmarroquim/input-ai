@@ -1,1 +1,61 @@
-# input-ai
+# Estude A.I. 📚✨
+
+Aplicativo para celular que ajuda estudantes a **aprenderem a estudar**, com:
+
+- **Aprenda a estudar**: técnicas explicadas passo a passo (Pomodoro, recordação ativa, repetição espaçada, Feynman, mapa mental, intercalação e planejamento), dica do dia e progresso (dias seguidos, minutos de foco, técnicas aprendidas).
+- **Pomodoro**: timer de foco/pausa que registra seu tempo de estudo.
+- **Shorts**: feed vertical de vídeos curtos do YouTube por matéria. Deslize para ver o próximo.
+- **Videoaulas**: busca de aulas do YouTube por matéria ou assunto, com player no app e dicas de como assistir para aprender.
+- **Tutor IA com câmera**: tire uma foto do exercício, do caderno ou da lousa e a IA (Claude, da Anthropic) reconhece o conteúdo e ajuda:
+  - **💡 Modo Dica**: pistas e perguntas guiadas, sem entregar a resposta.
+  - **📖 Modo Explicar**: resolução passo a passo e um exercício parecido para praticar.
+
+## Estrutura
+
+```
+mobile/   App Expo (React Native + TypeScript, Expo Router): Android, iOS e web
+server/   API Node.js (Express): chama o Claude e a API de dados do YouTube
+```
+
+As chaves de API ficam **só no servidor**. O app nunca vê as chaves.
+
+## Como rodar
+
+### 1. Servidor
+
+```bash
+cd server
+npm install
+cp .env.example .env   # preencha as chaves
+npm start              # http://localhost:3333
+```
+
+| Variável | Para quê |
+|---|---|
+| `ANTHROPIC_API_KEY` | Tutor IA ([console.anthropic.com](https://console.anthropic.com)) |
+| `YOUTUBE_API_KEY` | Busca de Shorts e videoaulas ([YouTube Data API v3](https://console.cloud.google.com/apis/library/youtube.googleapis.com)) |
+| `PORT` | Porta do servidor (padrão 3333) |
+
+Sem `YOUTUBE_API_KEY`, as telas de vídeo mostram um botão para abrir a busca direto no YouTube.
+
+### 2. Aplicativo
+
+```bash
+cd mobile
+npm install
+cp .env.example .env   # EXPO_PUBLIC_API_URL=http://SEU_IP:3333
+npx expo start
+```
+
+Abra no celular com o app **Expo Go** (leia o QR code) ou aperte `w` para abrir no navegador.
+No celular físico, use o **IP da sua máquina na rede** em `EXPO_PUBLIC_API_URL` (não `localhost`).
+
+Para gerar o app instalável (APK/AAB/IPA): `npx eas-cli@latest build`.
+
+## Endpoints da API
+
+- `GET /api/health`: diz quais integrações estão configuradas.
+- `POST /api/tutor`: `{ mode: "dica" | "explicar", messages: [{ role, text, image?: { base64, mediaType } }] }` → `{ reply }`
+- `GET /api/videos?tipo=short|aula&q=assunto` → `{ items: [{ id, title, channel, thumbnail }] }`
+
+O tutor usa o modelo `claude-opus-5-5` com raciocínio adaptativo e fallback automático do servidor caso uma resposta seja recusada.

@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "Estude A.I.",
+    "slug": "estude-ai",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "org.profarthur.estudeai",
+      "infoPlist": {
+        "NSCameraUsageDescription": "O Estude A.I. usa a câmera para fotografar exercícios e tirar dúvidas com o Tutor IA.",
+        "NSPhotoLibraryUsageDescription": "O Estude A.I. acessa suas fotos para você enviar exercícios ao Tutor IA."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "org.profarthur.estudeai"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "O Estude A.I. usa a câmera para fotografar exercícios e tirar dúvidas com o Tutor IA.",
+          "photosPermission": "O Estude A.I. acessa suas fotos para você enviar exercícios ao Tutor IA."
+        }
+      ]
+    ],
+    "scheme": "estudeai"
+  }
+}
