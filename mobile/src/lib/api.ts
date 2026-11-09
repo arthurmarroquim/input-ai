@@ -1,4 +1,4 @@
-// Comunicação com o backend do Estude A.I. (pasta /server).
+// Comunicação com o backend do ENSINA A.I (pasta /server).
 // As chaves das APIs (Claude e YouTube) ficam no servidor, nunca no app.
 export const API_URL = (process.env.EXPO_PUBLIC_API_URL || "http://localhost:3333").replace(/\/$/, "");
 

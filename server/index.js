@@ -1,4 +1,4 @@
-// Backend do Estude A.I.
+// Backend do ENSINA A.I
 // - /api/tutor  : tutor de estudos com IA (Claude), aceita fotos da câmera
 // - /api/videos : busca vídeos curtos e videoaulas no YouTube
 // As chaves de API ficam SOMENTE aqui no servidor, nunca no aplicativo.
@@ -26,7 +26,7 @@ app.use((req, res, next) => {
   next();
 });
 
-const SYSTEM_PROMPT = `Você é o Tutor do Estude A.I., um aplicativo que ensina estudantes brasileiros (ensino fundamental, médio, vestibular e ENEM) a aprenderem a estudar.
+const SYSTEM_PROMPT = `Você é o Tutor do ENSINA A.I, um aplicativo que ensina estudantes brasileiros (ensino fundamental, médio, vestibular e ENEM) a aprenderem a estudar.
 
 Seu jeito de ajudar:
 - Fale sempre em português do Brasil, com linguagem clara, acolhedora e adequada à idade do aluno.
@@ -278,7 +278,7 @@ function decodeEntities(s = "") {
 await auth.ensureAdmin();
 
 app.listen(PORT, () => {
-  console.log(`Estude A.I. API rodando em http://localhost:${PORT}`);
+  console.log(`ENSINA A.I API rodando em http://localhost:${PORT}`);
   if (!hasAnthropicCredentials) console.warn("⚠️  ANTHROPIC_API_KEY não definida — o Tutor IA não vai responder.");
   if (!YOUTUBE_API_KEY) console.warn("⚠️  YOUTUBE_API_KEY não definida — a busca de vídeos ficará desativada.");
 });

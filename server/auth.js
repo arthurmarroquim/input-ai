@@ -1,4 +1,4 @@
-// Usuários, senhas e sessões do Estude A.I.
+// Usuários, senhas e sessões do ENSINA A.I
 // - Senhas: scrypt com salt aleatório (nunca guardamos a senha em texto).
 // - Sessões: token aleatório entregue ao app; no arquivo guardamos só o hash SHA-256 dele.
 // - Armazenamento: arquivo JSON em server/data/ (simples para começar; troque por um banco quando crescer).
@@ -164,7 +164,7 @@ export const countAdmins = () => db.users.filter((u) => u.role === "admin").leng
  */
 export async function ensureAdmin() {
   load();
-  const email = normalizeEmail(process.env.ADMIN_EMAIL || "admin@estude.ai");
+  const email = normalizeEmail(process.env.ADMIN_EMAIL || "admin@ensina.ai");
   const existing = findByEmail(email);
   if (existing) {
     if (existing.role !== "admin") await setRole(existing.id, "admin");

@@ -1,7 +1,7 @@
 {
-  "name": "estude-ai-server",
+  "name": "ensina-ai-server",
   "version": "1.0.0",
-  "description": "API do Estude A.I. (tutor IA + busca de vídeos)",
+  "description": "API do ENSINA A.I (tutor IA + busca de vídeos)",
   "main": "index.js",
   "scripts": {
     "start": "node --env-file-if-exists=.env index.js",

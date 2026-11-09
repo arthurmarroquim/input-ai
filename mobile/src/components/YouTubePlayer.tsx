@@ -17,7 +17,7 @@ referrerpolicy="strict-origin-when-cross-origin"></iframe></body></html>`;
   return (
     <View style={styles.box}>
       <WebView
-        source={{ html, baseUrl: "https://estudeai.app" }}
+        source={{ html, baseUrl: "https://ensinaai.app" }}
         style={styles.box}
         allowsInlineMediaPlayback
         allowsFullscreenVideo

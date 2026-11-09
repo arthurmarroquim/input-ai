@@ -1,28 +1,28 @@
 {
   "expo": {
-    "name": "Estude A.I.",
-    "slug": "estude-ai",
+    "name": "ENSINA A.I",
+    "slug": "ensina-ai",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "org.profarthur.estudeai",
+      "bundleIdentifier": "org.profarthur.ensinaai",
       "infoPlist": {
-        "NSCameraUsageDescription": "O Estude A.I. usa a câmera para fotografar exercícios e tirar dúvidas com o Tutor IA.",
-        "NSPhotoLibraryUsageDescription": "O Estude A.I. acessa suas fotos para você enviar exercícios ao Tutor IA."
+        "NSCameraUsageDescription": "O ENSINA A.I usa a câmera para fotografar exercícios e tirar dúvidas com o Tutor IA.",
+        "NSPhotoLibraryUsageDescription": "O ENSINA A.I acessa suas fotos para você enviar exercícios ao Tutor IA."
       }
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#4A0552",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "org.profarthur.estudeai"
+      "package": "org.profarthur.ensinaai"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -32,12 +32,20 @@
       [
         "expo-image-picker",
         {
-          "cameraPermission": "O Estude A.I. usa a câmera para fotografar exercícios e tirar dúvidas com o Tutor IA.",
-          "photosPermission": "O Estude A.I. acessa suas fotos para você enviar exercícios ao Tutor IA."
+          "cameraPermission": "O ENSINA A.I usa a câmera para fotografar exercícios e tirar dúvidas com o Tutor IA.",
+          "photosPermission": "O ENSINA A.I acessa suas fotos para você enviar exercícios ao Tutor IA."
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "backgroundColor": "#4A0552"
+        }
+      ]
     ],
-    "scheme": "estudeai"
+    "scheme": "ensinaai"
   }
 }

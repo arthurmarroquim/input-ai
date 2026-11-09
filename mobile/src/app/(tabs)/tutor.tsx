@@ -23,7 +23,7 @@ const BOAS_VINDAS: ChatMessage = {
   id: "welcome",
   role: "assistant",
   text:
-    "Oi! Eu sou o Tutor do Estude A.I. ✨\n\n" +
+    "Oi! Eu sou o Tutor do ENSINA A.I ✨\n\n" +
     "- Tire uma **foto** do exercício, do caderno ou do livro e eu reconheço o que está escrito.\n" +
     "- No modo **Dica**, eu te dou pistas para você chegar à resposta sozinho.\n" +
     "- No modo **Explicar**, eu resolvo passo a passo.\n\n" +

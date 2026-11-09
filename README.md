@@ -1,4 +1,4 @@
-# Estude A.I. 📚✨
+# ENSINA A.I 💡📚
 
 Aplicativo para celular que ajuda estudantes a **aprenderem a estudar**, com:
 
@@ -37,7 +37,7 @@ npm start              # http://localhost:3333
 | `ANTHROPIC_API_KEY` | Tutor IA ([console.anthropic.com](https://console.anthropic.com)) |
 | `YOUTUBE_API_KEY` | Busca de Shorts e videoaulas ([YouTube Data API v3](https://console.cloud.google.com/apis/library/youtube.googleapis.com)) |
 | `PORT` | Porta do servidor (padrão 3333) |
-| `ADMIN_EMAIL` | E-mail do administrador (padrão `admin@estude.ai`) |
+| `ADMIN_EMAIL` | E-mail do administrador (padrão `admin@ensina.ai`) |
 | `ADMIN_PASSWORD` | Senha do administrador. Se ficar vazia, uma senha forte é gerada e mostrada **uma vez** no terminal |
 
 ### Usuário administrador

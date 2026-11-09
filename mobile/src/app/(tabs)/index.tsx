@@ -1,8 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Blobs from "../../components/Blobs";
 import { TECNICAS, dicaDoDia } from "../../data/tecnicas";
 import { useAuth } from "../../lib/auth";
 import { streak, useProgress } from "../../lib/storage";
@@ -44,7 +45,13 @@ export default function Home() {
         end={{ x: 1, y: 1 }}
         style={[styles.hero, { paddingTop: insets.top + 20 }]}
       >
+        <Blobs />
         <View style={styles.heroTop}>
+          <Image
+            source={require("../../../assets/logo.png")}
+            style={styles.logo}
+            accessibilityLabel="Logo Ensina Aí"
+          />
           <View style={{ flex: 1 }}>
             <Text style={styles.hello}>
               {saudacao()}
@@ -154,10 +161,24 @@ export default function Home() {
 }
 
 const styles = StyleSheet.create({
-  hero: { paddingHorizontal: 20, paddingBottom: 28, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 },
-  heroTop: { flexDirection: "row", alignItems: "flex-start" },
+  hero: {
+    paddingHorizontal: 20,
+    paddingBottom: 28,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
+    overflow: "hidden",
+  },
+  heroTop: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
+  logo: { width: 56, height: 56, borderRadius: 28, borderWidth: 2, borderColor: "rgba(255,255,255,0.5)" },
   hello: { color: "rgba(255,255,255,0.9)", fontSize: 15, fontWeight: "600" },
-  heroTitle: { color: "#fff", fontSize: 28, fontWeight: "900", marginTop: 4, lineHeight: 34 },
+  heroTitle: {
+    color: "#fff",
+    fontSize: 26,
+    fontWeight: "900",
+    fontStyle: "italic",
+    marginTop: 4,
+    lineHeight: 32,
+  },
   streak: {
     backgroundColor: "rgba(255,255,255,0.22)",
     borderRadius: radius.md,

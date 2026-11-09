@@ -1,8 +1,9 @@
 import { LinearGradient } from "expo-linear-gradient";
 import { ReactNode } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { colors, gradient, radius } from "../lib/theme";
+import Blobs from "./Blobs";
 
 // Moldura das telas de login e cadastro: topo lilás com a marca e um cartão branco.
 export default function AuthShell({
@@ -27,10 +28,13 @@ export default function AuthShell({
           end={{ x: 1, y: 1 }}
           style={[styles.hero, { paddingTop: insets.top + 36 }]}
         >
-          <View style={styles.logo}>
-            <Text style={{ fontSize: 34 }}>📚</Text>
-          </View>
-          <Text style={styles.brand}>Estude A.I.</Text>
+          <Blobs />
+          <Image
+            source={require("../../assets/logo.png")}
+            style={styles.logo}
+            accessibilityLabel="Logo Ensina Aí"
+          />
+          <Text style={styles.brand}>ENSINA A.I</Text>
           <Text style={styles.tagline}>Aprenda a estudar do seu jeito ✨</Text>
         </LinearGradient>
         <View style={[styles.card, { paddingBottom: insets.bottom + 24 }]}>
@@ -44,16 +48,16 @@ export default function AuthShell({
 }
 
 const styles = StyleSheet.create({
-  hero: { alignItems: "center", paddingBottom: 56 },
-  logo: {
-    width: 72,
-    height: 72,
-    borderRadius: 24,
-    backgroundColor: "rgba(255,255,255,0.25)",
-    alignItems: "center",
-    justifyContent: "center",
+  hero: { alignItems: "center", paddingBottom: 56, overflow: "hidden" },
+  logo: { width: 124, height: 124, borderRadius: 62, borderWidth: 4, borderColor: "rgba(255,255,255,0.35)" },
+  brand: {
+    color: "#fff",
+    fontSize: 30,
+    fontWeight: "900",
+    fontStyle: "italic",
+    marginTop: 14,
+    letterSpacing: 0.5,
   },
-  brand: { color: "#fff", fontSize: 30, fontWeight: "900", marginTop: 12 },
   tagline: { color: "rgba(255,255,255,0.9)", fontSize: 15, marginTop: 4, fontWeight: "600" },
   card: {
     flex: 1,

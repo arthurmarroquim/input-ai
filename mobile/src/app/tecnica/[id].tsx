@@ -24,7 +24,7 @@ export default function TecnicaScreen() {
   return (
     <ScrollView contentContainerStyle={styles.page}>
       <Stack.Screen options={{ title: "" }} />
-      <LinearGradient colors={gradient.soft} style={styles.hero}>
+      <LinearGradient colors={gradient.sky} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
         <Text style={styles.emoji}>{tec.emoji}</Text>
       </LinearGradient>
       <Text style={styles.title}>{tec.nome}</Text>
