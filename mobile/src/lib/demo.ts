@@ -1,7 +1,10 @@
+import { TUTOR_INSTRUCOES } from "./tutorPrompt";
+
 // Modo demonstração (EXPO_PUBLIC_DEMO=1): simula o servidor dentro do próprio navegador.
 // Serve para publicar o app como site estático (ex.: GitHub Pages) e testar no celular.
 // Contas, progresso e sessões ficam SÓ no aparelho (localStorage). Tutor IA e vídeos
-// precisam do servidor de verdade e por isso respondem com mensagens de demonstração.
+// usam o servidor de verdade. Aqui, aberto como Artifact no claude.ai, o Tutor pergunta ao
+// Claude do próprio aluno (capacidade sample); os vídeos abrem no YouTube.
 
 export const DEMO = process.env.EXPO_PUBLIC_DEMO === "1";
 export const DEMO_ADMIN = { email: "admin@ensina.ai", password: "ensina2026" };
@@ -244,23 +247,7 @@ export async function demoRequest(
 
   if (p === "/api/tutor" && method === "POST") {
     needAuth();
-    const last = body.messages?.[body.messages.length - 1] ?? {};
-    const pergunta = String(last.text || "").trim();
-    const foto = Boolean(last.image);
-    const dica = body.mode !== "explicar";
-    return {
-      reply:
-        "🧪 **Versão de demonstração**\n\n" +
-        (foto
-          ? "Recebi sua foto! 📸 Na versão completa, o Tutor IA lê o exercício da imagem, diz o que reconheceu e te ajuda a resolver.\n\n"
-          : pergunta
-            ? `Você perguntou: "${pergunta.slice(0, 140)}${pergunta.length > 140 ? "…" : ""}"\n\n`
-            : "") +
-        (dica
-          ? "No **modo Dica**, eu responderia com pistas e perguntas para você chegar à resposta sozinho, sem entregar o resultado pronto."
-          : "No **modo Explicar**, eu resolveria passo a passo e no final te passaria um exercício parecido para praticar.") +
-        "\n\nPara o Tutor responder de verdade, o app precisa estar ligado ao servidor do ENSINA A.I com a chave da IA configurada.",
-    };
+    return { reply: await tutorViaClaude(body) };
   }
 
   if (p === "/api/videos") {
@@ -271,6 +258,91 @@ export async function demoRequest(
   if (p === "/api/health") return { ok: true, ai: false, youtube: false, demo: true };
 
   throw new DemoError("Rota não encontrada na demonstração.", 404);
+}
+
+// ---------- Tutor IA pelo próprio Claude do aluno (capacidade "sample" do Artifact) ----------
+
+type MsgIn = { role: "user" | "assistant"; text?: string; image?: { base64: string; mediaType: string } };
+type SampleFn = ((
+  input: unknown,
+  opts?: Record<string, unknown>,
+) => Promise<{ text: string; truncated: boolean }>) & {
+  limits?: () => Promise<{ images?: { maxCount: number } }>;
+};
+
+async function obterSample(): Promise<SampleFn | null> {
+  try {
+    const c = (globalThis as { claude?: { use?: (n: string) => Promise<unknown> } }).claude;
+    if (!c?.use) return null;
+    return ((await c.use("sample")) as SampleFn | null) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function base64ParaBlob(b64: string, type: string) {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return new Blob([bytes], { type });
+}
+
+const MSG_ERRO: Record<string, string> = {
+  not_granted:
+    "Para o Tutor responder, permita que esta página use o Claude (toque em Permitir quando aparecer).",
+  sampling_disabled: "O Claude não está disponível para esta conta.",
+  rate_limited: "Muitas perguntas em pouco tempo. Espere um pouco e tente de novo.",
+  session_expired: "Sua sessão no Claude expirou. Entre de novo no Claude e recarregue a página.",
+  image_rejected: "Não consegui usar essa imagem. Tente outra foto (JPG ou PNG).",
+  images_unavailable: "Nesta visualização não dá para enviar fotos. Escreva a dúvida em texto.",
+  refused: "Não consigo ajudar com esse pedido. Que tal mandar uma dúvida de alguma matéria? 📚",
+  empty_completion: "Não consegui gerar uma resposta. Tente perguntar de outro jeito.",
+  prompt_too_large: "A conversa ficou muito longa. Saia e volte ao Tutor para começar de novo.",
+};
+
+async function tutorViaClaude(body: { messages?: MsgIn[]; mode?: string }) {
+  const sample = await obterSample();
+  if (!sample) {
+    throw new DemoError(
+      "O Tutor IA desta demonstração só responde quando o app é aberto pelo link do Claude (claude.ai).",
+      503,
+    );
+  }
+  const msgs = (body.messages ?? []).slice(-12);
+  const ultima = msgs[msgs.length - 1];
+  const modo = body.mode === "explicar" ? "MODO EXPLICAR" : "MODO DICA";
+
+  // Instruções como primeiro turno; depois o histórico; a pergunta nova leva o modo.
+  const turns: { role: "user" | "assistant"; content: string }[] = [
+    { role: "user", content: `${TUTOR_INSTRUCOES}\n\nResponda sempre seguindo essas instruções.` },
+  ];
+  msgs.forEach((m, i) => {
+    const isLast = i === msgs.length - 1;
+    let content = String(m.text || "").slice(0, 6000);
+    if (m.role === "user" && m.image && !isLast) content = `[O aluno enviou uma foto antes.] ${content}`;
+    if (isLast) {
+      content = `[${modo}]\n${content || "Me ajude com o que aparece nesta foto."}`;
+      if (m.image)
+        content = `[O aluno enviou a foto anexada: um exercício, caderno, livro ou lousa.]\n${content}`;
+    }
+    if (content.trim()) turns.push({ role: m.role === "assistant" ? "assistant" : "user", content });
+  });
+
+  const opts: Record<string, unknown> = { cache: false };
+  if (ultima?.image?.base64) {
+    const lim = await sample.limits?.().catch(() => null);
+    if (!lim?.images) throw new DemoError(MSG_ERRO.images_unavailable, 400);
+    opts.images = [base64ParaBlob(ultima.image.base64, ultima.image.mediaType || "image/jpeg")];
+  }
+
+  try {
+    const { text, truncated } = await sample(turns, opts);
+    return truncated ? `${text}\n\n(Resposta cortada: peça uma parte de cada vez.)` : text;
+  } catch (e) {
+    const err = e as { code?: string; text?: string };
+    if (err.text && err.code !== "refused") return `${err.text}\n\n⚠️ A resposta foi interrompida.`;
+    throw new DemoError(MSG_ERRO[err.code ?? ""] ?? "A IA está indisponível agora. Tente novamente.", 502);
+  }
 }
 
 export { DemoError };
