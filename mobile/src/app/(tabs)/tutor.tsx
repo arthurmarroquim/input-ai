@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -16,7 +17,7 @@ import {
   View,
 } from "react-native";
 import { askTutor, ChatImage, ChatMessage, TutorMode } from "../../lib/api";
-import { Theme, useTheme } from "../../lib/theme";
+import { colors, gradient, radius, shadow } from "../../lib/theme";
 
 const BOAS_VINDAS: ChatMessage = {
   id: "welcome",
@@ -30,17 +31,16 @@ const BOAS_VINDAS: ChatMessage = {
 };
 
 const SUGESTOES = [
-  "Monte um plano de estudos para minha semana",
-  "Como decorar fórmulas sem esquecer?",
-  "Me explique a técnica Feynman com um exemplo",
-  "Faça 3 perguntas para eu testar o que sei de frações",
+  "📅 Monte um plano de estudos para minha semana",
+  "🧠 Como decorar fórmulas sem esquecer?",
+  "👩‍🏫 Me explique a técnica Feynman com um exemplo",
+  "❓ Faça 3 perguntas para eu testar o que sei de frações",
 ];
 
 let nextId = 0;
 const uid = () => `${Date.now()}-${nextId++}`;
 
 export default function Tutor() {
-  const t = useTheme();
   const { assunto } = useLocalSearchParams<{ assunto?: string }>();
   const [messages, setMessages] = useState<ChatMessage[]>([BOAS_VINDAS]);
   const [texto, setTexto] = useState("");
@@ -104,53 +104,58 @@ export default function Tutor() {
     }
   }
 
+  const podeEnviar = !enviando && (!!texto.trim() || !!imagem);
+
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1 }}
+      style={{ flex: 1, backgroundColor: colors.bgSoft }}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       keyboardVerticalOffset={90}
     >
-      <View style={[styles.modeBar, { backgroundColor: t.card, borderColor: t.border }]}>
-        {(["dica", "explicar"] as TutorMode[]).map((m) => (
-          <Pressable
-            key={m}
-            onPress={() => setModo(m)}
-            accessibilityRole="button"
-            accessibilityState={{ selected: modo === m }}
-            style={[styles.modeBtn, modo === m && { backgroundColor: t.primary }]}
-          >
-            <Text style={{ color: modo === m ? "#fff" : t.text, fontWeight: "700" }}>
-              {m === "dica" ? "💡 Dica" : "📖 Explicar"}
-            </Text>
-          </Pressable>
-        ))}
+      {/* Seletor de modo */}
+      <View style={styles.modeBar}>
+        {(["dica", "explicar"] as TutorMode[]).map((m) => {
+          const ativo = modo === m;
+          return (
+            <Pressable
+              key={m}
+              onPress={() => setModo(m)}
+              accessibilityRole="button"
+              accessibilityState={{ selected: ativo }}
+              style={[styles.modeBtn, ativo && styles.modeBtnActive]}
+            >
+              <Text style={[styles.modeText, ativo && { color: "#fff" }]}>
+                {m === "dica" ? "💡 Dica" : "📖 Explicar"}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
 
       <FlatList
         ref={listRef}
         data={messages}
         keyExtractor={(m) => m.id}
-        contentContainerStyle={{ padding: 16, gap: 10 }}
+        contentContainerStyle={{ padding: 16, gap: 12 }}
         onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
-        renderItem={({ item }) => <Bubble msg={item} t={t} />}
+        renderItem={({ item }) => <Bubble msg={item} />}
         ListFooterComponent={
           <>
             {enviando && (
-              <View
-                style={[styles.bubble, styles.bot, { backgroundColor: t.bubbleBot, borderColor: t.border }]}
-              >
-                <ActivityIndicator color={t.primary} />
+              <View style={[styles.row, { marginTop: 12 }]}>
+                <Avatar />
+                <View style={[styles.bubble, styles.bot]}>
+                  <ActivityIndicator color={colors.primary} />
+                </View>
               </View>
             )}
             {messages.length === 1 && (
               <View style={styles.suggestions}>
+                <Text style={styles.suggestTitle}>Experimente perguntar:</Text>
                 {SUGESTOES.map((s) => (
-                  <Pressable
-                    key={s}
-                    onPress={() => enviar(s)}
-                    style={[styles.suggestion, { borderColor: t.primary, backgroundColor: t.primarySoft }]}
-                  >
-                    <Text style={{ color: t.primary, fontWeight: "600" }}>{s}</Text>
+                  <Pressable key={s} onPress={() => enviar(s)} style={styles.suggestion}>
+                    <Text style={styles.suggestionText}>{s}</Text>
+                    <Ionicons name="arrow-forward" size={16} color={colors.primary} />
                   </Pressable>
                 ))}
               </View>
@@ -160,71 +165,82 @@ export default function Tutor() {
       />
 
       {imagem && (
-        <View style={[styles.preview, { backgroundColor: t.card, borderColor: t.border }]}>
+        <View style={styles.preview}>
           <Image source={{ uri: imagem.uri }} style={styles.previewImg} />
-          <Text style={{ color: t.text, flex: 1 }}>
-            Foto pronta para enviar. Escreva sua dúvida (opcional).
+          <Text style={{ color: colors.text, flex: 1, fontSize: 13 }}>
+            Foto pronta! Escreva sua dúvida ou só envie. 📸
           </Text>
           <Pressable onPress={() => setImagem(null)} accessibilityLabel="Remover foto">
-            <Ionicons name="close-circle" size={24} color={t.muted} />
+            <Ionicons name="close-circle" size={26} color={colors.muted} />
           </Pressable>
         </View>
       )}
 
-      <View style={[styles.inputBar, { backgroundColor: t.card, borderColor: t.border }]}>
-        <Pressable
-          onPress={() => escolherImagem("camera")}
-          style={styles.iconBtn}
-          accessibilityLabel="Tirar foto"
-        >
-          <Ionicons name="camera" size={26} color={t.primary} />
+      {/* Barra de digitação */}
+      <View style={styles.inputBar}>
+        <Pressable onPress={() => escolherImagem("camera")} accessibilityLabel="Tirar foto">
+          <LinearGradient colors={gradient.button} style={styles.cameraBtn}>
+            <Ionicons name="camera" size={24} color="#fff" />
+          </LinearGradient>
         </Pressable>
-        <Pressable
-          onPress={() => escolherImagem("galeria")}
-          style={styles.iconBtn}
-          accessibilityLabel="Escolher da galeria"
-        >
-          <Ionicons name="image" size={24} color={t.primary} />
-        </Pressable>
-        <TextInput
-          value={texto}
-          onChangeText={setTexto}
-          placeholder={
-            modo === "dica" ? "Pergunte e eu te dou uma pista…" : "Pergunte e eu explico passo a passo…"
-          }
-          placeholderTextColor={t.muted}
-          style={[styles.input, { color: t.text, backgroundColor: t.bg }]}
-          multiline
-        />
+        <View style={styles.inputWrap}>
+          <TextInput
+            value={texto}
+            onChangeText={setTexto}
+            placeholder={modo === "dica" ? "Pergunte e eu te dou uma pista…" : "Pergunte e eu explico…"}
+            placeholderTextColor={colors.muted}
+            style={styles.input}
+            multiline
+          />
+          <Pressable
+            onPress={() => escolherImagem("galeria")}
+            style={styles.galleryBtn}
+            accessibilityLabel="Escolher da galeria"
+          >
+            <Ionicons name="image-outline" size={22} color={colors.primary} />
+          </Pressable>
+        </View>
         <Pressable
           onPress={() => enviar()}
-          disabled={enviando || (!texto.trim() && !imagem)}
-          style={[
-            styles.send,
-            { backgroundColor: t.primary, opacity: enviando || (!texto.trim() && !imagem) ? 0.4 : 1 },
-          ]}
+          disabled={!podeEnviar}
+          style={[styles.send, { opacity: podeEnviar ? 1 : 0.35 }]}
           accessibilityLabel="Enviar"
         >
-          <Ionicons name="send" size={18} color="#fff" />
+          <Ionicons name="arrow-up" size={22} color="#fff" />
         </Pressable>
       </View>
     </KeyboardAvoidingView>
   );
 }
 
-function Bubble({ msg, t }: { msg: ChatMessage; t: Theme }) {
-  const isUser = msg.role === "user";
+function Avatar() {
   return (
-    <View
-      style={[
-        styles.bubble,
-        isUser
-          ? [styles.user, { backgroundColor: t.bubbleUser }]
-          : [styles.bot, { backgroundColor: t.bubbleBot, borderColor: t.border }],
-      ]}
-    >
-      {msg.image && <Image source={{ uri: msg.image.uri }} style={styles.msgImg} />}
-      {!!msg.text && <RichText text={msg.text} color={isUser ? t.bubbleUserText : t.text} />}
+    <LinearGradient colors={gradient.button} style={styles.avatar}>
+      <Ionicons name="sparkles" size={14} color="#fff" />
+    </LinearGradient>
+  );
+}
+
+function Bubble({ msg }: { msg: ChatMessage }) {
+  if (msg.role === "user") {
+    return (
+      <LinearGradient
+        colors={gradient.button}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[styles.bubble, styles.user]}
+      >
+        {msg.image && <Image source={{ uri: msg.image.uri }} style={styles.msgImg} />}
+        {!!msg.text && <RichText text={msg.text} color={colors.bubbleUserText} />}
+      </LinearGradient>
+    );
+  }
+  return (
+    <View style={styles.row}>
+      <Avatar />
+      <View style={[styles.bubble, styles.bot]}>
+        <RichText text={msg.text} color={colors.text} />
+      </View>
     </View>
   );
 }
@@ -250,46 +266,88 @@ function RichText({ text, color }: { text: string; color: string }) {
 const styles = StyleSheet.create({
   modeBar: {
     flexDirection: "row",
-    margin: 12,
-    marginBottom: 0,
-    padding: 4,
-    borderRadius: 12,
-    borderWidth: 1,
+    marginHorizontal: 16,
+    marginTop: 8,
+    padding: 5,
+    borderRadius: radius.pill,
+    backgroundColor: colors.lilac2,
   },
-  modeBtn: { flex: 1, paddingVertical: 8, borderRadius: 9, alignItems: "center" },
-  bubble: { maxWidth: "88%", padding: 12, borderRadius: 16 },
-  user: { alignSelf: "flex-end", borderBottomRightRadius: 4 },
-  bot: { alignSelf: "flex-start", borderBottomLeftRadius: 4, borderWidth: 1 },
-  msgImg: { width: 220, height: 220, borderRadius: 10, marginBottom: 8 },
-  suggestions: { gap: 8, marginTop: 8 },
-  suggestion: { padding: 12, borderRadius: 12, borderWidth: 1 },
+  modeBtn: { flex: 1, paddingVertical: 10, borderRadius: radius.pill, alignItems: "center" },
+  modeBtnActive: { backgroundColor: colors.primary, ...shadow },
+  modeText: { color: colors.primaryDark, fontWeight: "800" },
+  row: { flexDirection: "row", alignItems: "flex-end", gap: 8 },
+  avatar: { width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center" },
+  bubble: { maxWidth: "84%", padding: 14, borderRadius: 22 },
+  user: { alignSelf: "flex-end", borderBottomRightRadius: 6 },
+  bot: {
+    backgroundColor: colors.card,
+    borderBottomLeftRadius: 6,
+    flexShrink: 1,
+    ...shadow,
+    shadowOpacity: 0.06,
+  },
+  msgImg: { width: 220, height: 220, borderRadius: 14, marginBottom: 8 },
+  suggestions: { gap: 10, marginTop: 16 },
+  suggestTitle: { color: colors.muted, fontWeight: "700", marginLeft: 4 },
+  suggestion: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: radius.md,
+    backgroundColor: colors.card,
+    borderWidth: 1.5,
+    borderColor: colors.lilac2,
+  },
+  suggestionText: { color: colors.text, fontWeight: "600", flex: 1 },
   preview: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    padding: 8,
+    padding: 10,
     marginHorizontal: 12,
-    borderRadius: 12,
-    borderWidth: 1,
+    marginBottom: 6,
+    borderRadius: radius.md,
+    backgroundColor: colors.primarySoft,
   },
-  previewImg: { width: 48, height: 48, borderRadius: 8 },
-  inputBar: { flexDirection: "row", alignItems: "flex-end", gap: 4, padding: 8, borderTopWidth: 1 },
-  iconBtn: { padding: 8 },
+  previewImg: { width: 48, height: 48, borderRadius: 10 },
+  inputBar: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    paddingBottom: 12,
+    backgroundColor: colors.bg,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+  },
+  cameraBtn: { width: 48, height: 48, borderRadius: 24, alignItems: "center", justifyContent: "center" },
+  inputWrap: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "flex-end",
+    backgroundColor: colors.primarySoft,
+    borderRadius: 24,
+    minHeight: 48,
+  },
   input: {
     flex: 1,
     maxHeight: 120,
-    paddingHorizontal: 12,
-    paddingTop: 10,
-    paddingBottom: 10,
-    borderRadius: 18,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
     fontSize: 15,
+    color: colors.text,
   },
+  galleryBtn: { padding: 12 },
   send: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: "center",
     justifyContent: "center",
-    marginLeft: 4,
+    backgroundColor: colors.primaryDark,
   },
 });

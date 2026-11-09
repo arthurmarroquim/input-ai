@@ -1,11 +1,10 @@
 import { Pressable, ScrollView, StyleSheet, Text } from "react-native";
 import { MATERIAS, Materia } from "../data/materias";
-import { useTheme } from "../lib/theme";
+import { colors, radius } from "../lib/theme";
 
 type Props = { selected: string; onSelect: (m: Materia) => void; dark?: boolean };
 
 export default function MateriaChips({ selected, onSelect, dark }: Props) {
-  const t = useTheme();
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
       {MATERIAS.map((m) => {
@@ -18,13 +17,12 @@ export default function MateriaChips({ selected, onSelect, dark }: Props) {
             accessibilityState={{ selected: active }}
             style={[
               styles.chip,
-              {
-                backgroundColor: active ? t.primary : dark ? "rgba(255,255,255,0.15)" : t.card,
-                borderColor: active ? t.primary : dark ? "transparent" : t.border,
-              },
+              active
+                ? { backgroundColor: colors.primary }
+                : { backgroundColor: dark ? "rgba(255,255,255,0.18)" : colors.primarySoft },
             ]}
           >
-            <Text style={{ color: active || dark ? "#fff" : t.text, fontWeight: "600" }}>
+            <Text style={[styles.text, { color: active || dark ? "#fff" : colors.primaryDark }]}>
               {m.emoji} {m.nome}
             </Text>
           </Pressable>
@@ -35,6 +33,7 @@ export default function MateriaChips({ selected, onSelect, dark }: Props) {
 }
 
 const styles = StyleSheet.create({
-  row: { gap: 8, paddingHorizontal: 16, paddingVertical: 10 },
-  chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, borderWidth: 1 },
+  row: { gap: 8, paddingHorizontal: 20, paddingVertical: 10 },
+  chip: { paddingHorizontal: 16, paddingVertical: 9, borderRadius: radius.pill },
+  text: { fontWeight: "700", fontSize: 14 },
 });

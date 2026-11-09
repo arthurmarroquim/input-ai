@@ -14,33 +14,34 @@ import {
 import MateriaChips from "../../components/MateriaChips";
 import VideosIndisponiveis from "../../components/VideosIndisponiveis";
 import { MATERIAS } from "../../data/materias";
-import { useTheme } from "../../lib/theme";
+import { colors, radius, shadow } from "../../lib/theme";
 import { useVideos } from "../../lib/useVideos";
 
 export default function Aulas() {
-  const t = useTheme();
   const [materia, setMateria] = useState<string>(MATERIAS[1].id);
   const [texto, setTexto] = useState("");
   const [busca, setBusca] = useState(MATERIAS[1].busca);
   const { items, loading, error, retry } = useVideos(busca, "aula");
 
+  function buscar() {
+    if (texto.trim()) {
+      setMateria("");
+      setBusca(texto.trim());
+    }
+  }
+
   return (
-    <View style={{ flex: 1 }}>
-      <View style={[styles.search, { backgroundColor: t.card, borderColor: t.border }]}>
-        <Ionicons name="search" size={18} color={t.muted} />
+    <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <View style={styles.search}>
+        <Ionicons name="search" size={20} color={colors.primary} />
         <TextInput
           value={texto}
           onChangeText={setTexto}
-          placeholder="Busque um assunto (ex.: equação do 2º grau)"
-          placeholderTextColor={t.muted}
-          style={[styles.input, { color: t.text }]}
+          placeholder="O que você quer aprender hoje?"
+          placeholderTextColor={colors.muted}
+          style={styles.input}
           returnKeyType="search"
-          onSubmitEditing={() => {
-            if (texto.trim()) {
-              setMateria("");
-              setBusca(texto.trim());
-            }
-          }}
+          onSubmitEditing={buscar}
         />
       </View>
       <View>
@@ -55,16 +56,16 @@ export default function Aulas() {
       </View>
 
       {loading ? (
-        <ActivityIndicator style={{ marginTop: 40 }} color={t.primary} size="large" />
+        <ActivityIndicator style={{ marginTop: 40 }} color={colors.primary} size="large" />
       ) : error ? (
         <VideosIndisponiveis error={error} query={busca} tipo="aula" onRetry={retry} />
       ) : (
         <FlatList
           data={items}
           keyExtractor={(v) => v.id}
-          contentContainerStyle={{ padding: 16, paddingTop: 4, gap: 14 }}
+          contentContainerStyle={{ padding: 20, paddingTop: 6, gap: 18 }}
           ListEmptyComponent={
-            <Text style={{ color: t.muted, textAlign: "center" }}>Nenhuma aula encontrada.</Text>
+            <Text style={{ color: colors.muted, textAlign: "center" }}>Nenhuma aula encontrada.</Text>
           }
           renderItem={({ item }) => (
             <Pressable
@@ -74,14 +75,19 @@ export default function Aulas() {
                   params: { id: item.id, title: item.title, channel: item.channel },
                 })
               }
-              style={[styles.card, { backgroundColor: t.card, borderColor: t.border }]}
+              style={({ pressed }) => [styles.card, pressed && { transform: [{ scale: 0.98 }] }]}
             >
-              <Image source={{ uri: item.thumbnail }} style={styles.thumb} />
-              <View style={{ padding: 12 }}>
-                <Text style={[styles.title, { color: t.text }]} numberOfLines={2}>
+              <View>
+                <Image source={{ uri: item.thumbnail }} style={styles.thumb} />
+                <View style={styles.play}>
+                  <Ionicons name="play" size={22} color={colors.primary} />
+                </View>
+              </View>
+              <View style={{ padding: 14 }}>
+                <Text style={styles.title} numberOfLines={2}>
                   {item.title}
                 </Text>
-                <Text style={{ color: t.muted, marginTop: 2 }}>{item.channel}</Text>
+                <Text style={styles.channel}>{item.channel}</Text>
               </View>
             </Pressable>
           )}
@@ -95,15 +101,34 @@ const styles = StyleSheet.create({
   search: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginHorizontal: 16,
-    marginTop: 12,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    borderWidth: 1,
+    gap: 10,
+    marginHorizontal: 20,
+    marginTop: 6,
+    paddingHorizontal: 16,
+    borderRadius: radius.pill,
+    backgroundColor: colors.primarySoft,
   },
-  input: { flex: 1, paddingVertical: 12, fontSize: 15 },
-  card: { borderRadius: 14, borderWidth: 1, overflow: "hidden" },
-  thumb: { width: "100%", aspectRatio: 16 / 9, backgroundColor: "#000" },
-  title: { fontSize: 16, fontWeight: "700" },
+  input: { flex: 1, paddingVertical: 14, fontSize: 15, color: colors.text },
+  card: {
+    borderRadius: radius.lg,
+    backgroundColor: colors.card,
+    overflow: "hidden",
+    ...shadow,
+    shadowOpacity: 0.08,
+  },
+  thumb: { width: "100%", aspectRatio: 16 / 9, backgroundColor: colors.lilac2 },
+  play: {
+    position: "absolute",
+    right: 12,
+    bottom: 12,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingLeft: 3,
+  },
+  title: { fontSize: 16, fontWeight: "800", color: colors.text, lineHeight: 21 },
+  channel: { color: colors.muted, marginTop: 4, fontWeight: "600" },
 });

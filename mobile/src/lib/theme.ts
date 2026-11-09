@@ -1,37 +1,39 @@
-import { useColorScheme } from "react-native";
-
-const light = {
-  bg: "#F6F7FB",
+// Identidade visual do Estude A.I.: lilás + branco.
+export const colors = {
+  bg: "#FFFFFF",
+  bgSoft: "#FAF7FF",
   card: "#FFFFFF",
-  text: "#1B1E2B",
-  muted: "#6B7085",
-  border: "#E3E5EE",
-  primary: "#5B4BFF",
-  primarySoft: "#ECEAFF",
-  accent: "#FF7A45",
-  success: "#1FA971",
-  bubbleUser: "#5B4BFF",
+  text: "#2B2350",
+  muted: "#8C84A8",
+  border: "#EEE8FB",
+  primary: "#9466F5", // lilás principal
+  primaryDark: "#7445E0",
+  primaryLight: "#C9B3FF",
+  primarySoft: "#F3EDFF",
+  lilac2: "#E6DAFF",
+  white: "#FFFFFF",
+  success: "#7C5CE0",
   bubbleUserText: "#FFFFFF",
-  bubbleBot: "#FFFFFF",
 };
 
-const dark: typeof light = {
-  bg: "#0F1117",
-  card: "#1A1D27",
-  text: "#F1F2F7",
-  muted: "#9CA0B4",
-  border: "#2A2E3B",
-  primary: "#8B7FFF",
-  primarySoft: "#26234A",
-  accent: "#FF925F",
-  success: "#3CCB8E",
-  bubbleUser: "#6C5CFF",
-  bubbleUserText: "#FFFFFF",
-  bubbleBot: "#1A1D27",
+export const gradient = {
+  hero: ["#B69CFF", "#9466F5", "#7445E0"] as const,
+  soft: ["#F6F1FF", "#EADFFF"] as const,
+  button: ["#A47BFF", "#7F52EC"] as const,
 };
 
-export type Theme = typeof light;
+export const radius = { sm: 12, md: 18, lg: 24, xl: 32, pill: 999 };
+
+export const shadow = {
+  shadowColor: "#7445E0",
+  shadowOpacity: 0.12,
+  shadowRadius: 16,
+  shadowOffset: { width: 0, height: 6 },
+  elevation: 4,
+};
+
+export type Theme = typeof colors;
 
 export function useTheme(): Theme {
-  return useColorScheme() === "dark" ? dark : light;
+  return colors;
 }

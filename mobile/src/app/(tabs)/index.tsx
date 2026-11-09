@@ -1,110 +1,257 @@
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TECNICAS, dicaDoDia } from "../../data/tecnicas";
 import { streak, useProgress } from "../../lib/storage";
-import { useTheme } from "../../lib/theme";
+import { colors, gradient, radius, shadow } from "../../lib/theme";
+
+type IconName = React.ComponentProps<typeof Ionicons>["name"];
+
+const ATALHOS: {
+  label: string;
+  sub: string;
+  icon: IconName;
+  href: "/pomodoro" | "/tutor" | "/shorts" | "/aulas";
+}[] = [
+  { label: "Modo foco", sub: "Pomodoro 25 min", icon: "timer", href: "/pomodoro" },
+  { label: "Foto da dúvida", sub: "Tutor IA", icon: "camera", href: "/tutor" },
+  { label: "Shorts", sub: "Aprenda em 1 min", icon: "play", href: "/shorts" },
+  { label: "Videoaulas", sub: "Por matéria", icon: "school", href: "/aulas" },
+];
+
+function saudacao() {
+  const h = new Date().getHours();
+  return h < 12 ? "Bom dia" : h < 18 ? "Boa tarde" : "Boa noite";
+}
 
 export default function Home() {
-  const t = useTheme();
+  const insets = useSafeAreaInsets();
   const { progress } = useProgress();
   const dias = streak(progress.studyDays);
+  const pctTecnicas = progress.learned.length / TECNICAS.length;
 
   return (
-    <ScrollView contentContainerStyle={styles.page}>
-      <Text style={[styles.hello, { color: t.text }]}>Olá! Bora aprender a estudar? 👋</Text>
-      <Text style={{ color: t.muted, marginBottom: 16 }}>
-        Técnicas, vídeos e um tutor com IA para tirar suas dúvidas — até por foto.
-      </Text>
+    <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={{ paddingBottom: 32 }}>
+      {/* Topo em degradê lilás */}
+      <LinearGradient
+        colors={gradient.hero}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[styles.hero, { paddingTop: insets.top + 20 }]}
+      >
+        <View style={styles.heroTop}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.hello}>{saudacao()}! 👋</Text>
+            <Text style={styles.heroTitle}>Bora estudar{"\n"}do jeito certo?</Text>
+          </View>
+          <View style={styles.streak}>
+            <Text style={styles.streakNum}>🔥 {dias}</Text>
+            <Text style={styles.streakLabel}>{dias === 1 ? "dia" : "dias"}</Text>
+          </View>
+        </View>
 
-      <View style={styles.stats}>
-        <Stat label="dias seguidos" value={`🔥 ${dias}`} />
-        <Stat label="min. de foco" value={`⏱️ ${progress.focusMinutes}`} />
-        <Stat label="técnicas" value={`✅ ${progress.learned.length}/${TECNICAS.length}`} />
+        <View style={styles.stats}>
+          <View style={styles.stat}>
+            <Text style={styles.statValue}>{progress.focusMinutes}</Text>
+            <Text style={styles.statLabel}>min de foco</Text>
+          </View>
+          <View style={styles.divider} />
+          <View style={styles.stat}>
+            <Text style={styles.statValue}>{progress.sessions}</Text>
+            <Text style={styles.statLabel}>pomodoros</Text>
+          </View>
+          <View style={styles.divider} />
+          <View style={styles.stat}>
+            <Text style={styles.statValue}>
+              {progress.learned.length}/{TECNICAS.length}
+            </Text>
+            <Text style={styles.statLabel}>técnicas</Text>
+          </View>
+        </View>
+      </LinearGradient>
+
+      <View style={styles.body}>
+        {/* Dica do dia */}
+        <View style={[styles.tip, shadow]}>
+          <View style={styles.tipIcon}>
+            <Text style={{ fontSize: 22 }}>💡</Text>
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.tipTitle}>Dica do dia</Text>
+            <Text style={styles.tipText}>{dicaDoDia()}</Text>
+          </View>
+        </View>
+
+        {/* Atalhos */}
+        <Text style={styles.section}>O que vamos fazer hoje?</Text>
+        <View style={styles.grid}>
+          {ATALHOS.map((a, i) => (
+            <Pressable
+              key={a.href}
+              onPress={() => router.push(a.href)}
+              style={({ pressed }) => [
+                styles.tile,
+                i === 1 && styles.tileStrong,
+                pressed && { transform: [{ scale: 0.97 }] },
+              ]}
+            >
+              <View style={[styles.tileIcon, i === 1 && { backgroundColor: "rgba(255,255,255,0.25)" }]}>
+                <Ionicons name={a.icon} size={22} color={i === 1 ? "#fff" : colors.primary} />
+              </View>
+              <Text style={[styles.tileLabel, i === 1 && { color: "#fff" }]}>{a.label}</Text>
+              <Text style={[styles.tileSub, i === 1 && { color: "rgba(255,255,255,0.85)" }]}>{a.sub}</Text>
+            </Pressable>
+          ))}
+        </View>
+
+        {/* Técnicas em carrossel */}
+        <View style={styles.sectionRow}>
+          <Text style={[styles.section, { marginTop: 0, marginBottom: 0 }]}>Aprenda a estudar</Text>
+          <Text style={styles.sectionHint}>{Math.round(pctTecnicas * 100)}%</Text>
+        </View>
+        <View style={styles.progressTrack}>
+          <View style={[styles.progressFill, { width: `${pctTecnicas * 100}%` }]} />
+        </View>
       </View>
 
-      <View style={[styles.tip, { backgroundColor: t.primarySoft }]}>
-        <Text style={[styles.tipTitle, { color: t.primary }]}>💡 Dica do dia</Text>
-        <Text style={{ color: t.text, lineHeight: 21 }}>{dicaDoDia()}</Text>
-      </View>
-
-      <Pressable onPress={() => router.push("/pomodoro")} style={[styles.cta, { backgroundColor: t.accent }]}>
-        <Text style={styles.ctaTitle}>🍅 Começar sessão de foco</Text>
-        <Text style={styles.ctaSub}>Pomodoro de 25 minutos</Text>
-      </Pressable>
-
-      <View style={styles.row}>
-        <Pressable
-          onPress={() => router.push("/tutor")}
-          style={[styles.half, { backgroundColor: t.primary }]}
-        >
-          <Text style={styles.ctaTitle}>📷 Foto da dúvida</Text>
-          <Text style={styles.ctaSub}>Pergunte ao Tutor IA</Text>
-        </Pressable>
-        <Pressable
-          onPress={() => router.push("/shorts")}
-          style={[styles.half, { backgroundColor: t.success }]}
-        >
-          <Text style={styles.ctaTitle}>▶️ Shorts</Text>
-          <Text style={styles.ctaSub}>Aprenda em 1 minuto</Text>
-        </Pressable>
-      </View>
-
-      <Text style={[styles.section, { color: t.text }]}>Aprenda a estudar</Text>
-      {TECNICAS.map((tec) => {
-        const done = progress.learned.includes(tec.id);
-        return (
-          <Pressable
-            key={tec.id}
-            onPress={() => router.push({ pathname: "/tecnica/[id]", params: { id: tec.id } })}
-            style={[styles.card, { backgroundColor: t.card, borderColor: t.border }]}
-          >
-            <Text style={styles.emoji}>{tec.emoji}</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.cardTitle, { color: t.text }]}>{tec.nome}</Text>
-              <Text style={{ color: t.muted }} numberOfLines={2}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.carousel}>
+        {TECNICAS.map((tec) => {
+          const done = progress.learned.includes(tec.id);
+          return (
+            <Pressable
+              key={tec.id}
+              onPress={() => router.push({ pathname: "/tecnica/[id]", params: { id: tec.id } })}
+              style={({ pressed }) => [styles.tecCard, pressed && { transform: [{ scale: 0.97 }] }]}
+            >
+              <View style={styles.tecEmojiBox}>
+                <Text style={styles.tecEmoji}>{tec.emoji}</Text>
+                {done && (
+                  <View style={styles.doneBadge}>
+                    <Ionicons name="checkmark" size={14} color="#fff" />
+                  </View>
+                )}
+              </View>
+              <Text style={styles.tecTitle} numberOfLines={1}>
+                {tec.nome}
+              </Text>
+              <Text style={styles.tecSub} numberOfLines={3}>
                 {tec.resumo}
               </Text>
-            </View>
-            {done && <Text style={{ color: t.success, fontSize: 18 }}>✓</Text>}
-          </Pressable>
-        );
-      })}
+            </Pressable>
+          );
+        })}
+      </ScrollView>
     </ScrollView>
   );
-
-  function Stat({ label, value }: { label: string; value: string }) {
-    return (
-      <View style={[styles.stat, { backgroundColor: t.card, borderColor: t.border }]}>
-        <Text style={[styles.statValue, { color: t.text }]}>{value}</Text>
-        <Text style={{ color: t.muted, fontSize: 12 }}>{label}</Text>
-      </View>
-    );
-  }
 }
 
 const styles = StyleSheet.create({
-  page: { padding: 16, paddingBottom: 32 },
-  hello: { fontSize: 22, fontWeight: "800", marginBottom: 4 },
-  stats: { flexDirection: "row", gap: 8, marginBottom: 12 },
-  stat: { flex: 1, padding: 12, borderRadius: 14, borderWidth: 1, alignItems: "center" },
-  statValue: { fontSize: 18, fontWeight: "800" },
-  tip: { padding: 14, borderRadius: 14, marginBottom: 12 },
-  tipTitle: { fontWeight: "800", marginBottom: 4 },
-  cta: { padding: 16, borderRadius: 16, marginBottom: 10 },
-  ctaTitle: { color: "#fff", fontSize: 17, fontWeight: "800" },
-  ctaSub: { color: "rgba(255,255,255,0.9)", marginTop: 2 },
-  row: { flexDirection: "row", gap: 10, marginBottom: 8 },
-  half: { flex: 1, padding: 16, borderRadius: 16 },
-  section: { fontSize: 18, fontWeight: "800", marginTop: 16, marginBottom: 8 },
-  card: {
-    flexDirection: "row",
+  hero: { paddingHorizontal: 20, paddingBottom: 28, borderBottomLeftRadius: 32, borderBottomRightRadius: 32 },
+  heroTop: { flexDirection: "row", alignItems: "flex-start" },
+  hello: { color: "rgba(255,255,255,0.9)", fontSize: 15, fontWeight: "600" },
+  heroTitle: { color: "#fff", fontSize: 28, fontWeight: "900", marginTop: 4, lineHeight: 34 },
+  streak: {
+    backgroundColor: "rgba(255,255,255,0.22)",
+    borderRadius: radius.md,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     alignItems: "center",
-    gap: 12,
-    padding: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-    marginBottom: 8,
   },
-  emoji: { fontSize: 28 },
-  cardTitle: { fontSize: 16, fontWeight: "700", marginBottom: 2 },
+  streakNum: { color: "#fff", fontWeight: "900", fontSize: 18 },
+  streakLabel: { color: "rgba(255,255,255,0.9)", fontSize: 12, fontWeight: "600" },
+  stats: {
+    flexDirection: "row",
+    backgroundColor: "rgba(255,255,255,0.18)",
+    borderRadius: radius.lg,
+    paddingVertical: 14,
+    marginTop: 22,
+  },
+  stat: { flex: 1, alignItems: "center" },
+  statValue: { color: "#fff", fontSize: 20, fontWeight: "900" },
+  statLabel: { color: "rgba(255,255,255,0.85)", fontSize: 12, marginTop: 2 },
+  divider: { width: 1, backgroundColor: "rgba(255,255,255,0.3)", marginVertical: 4 },
+  body: { paddingHorizontal: 20 },
+  tip: {
+    flexDirection: "row",
+    gap: 12,
+    backgroundColor: colors.card,
+    borderRadius: radius.lg,
+    padding: 16,
+    marginTop: -14,
+    alignItems: "center",
+  },
+  tipIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: colors.primarySoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  tipTitle: { color: colors.primary, fontWeight: "800", fontSize: 13, marginBottom: 2 },
+  tipText: { color: colors.text, lineHeight: 20, fontSize: 14 },
+  section: { fontSize: 19, fontWeight: "900", color: colors.text, marginTop: 26, marginBottom: 12 },
+  sectionRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 26 },
+  sectionHint: { color: colors.primary, fontWeight: "800" },
+  grid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
+  tile: {
+    width: "47.8%",
+    flexGrow: 1,
+    backgroundColor: colors.primarySoft,
+    borderRadius: radius.lg,
+    padding: 16,
+  },
+  tileStrong: { backgroundColor: colors.primary },
+  tileIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: colors.white,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+  tileLabel: { color: colors.text, fontWeight: "800", fontSize: 16 },
+  tileSub: { color: colors.muted, fontSize: 13, marginTop: 2 },
+  progressTrack: {
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.primarySoft,
+    marginTop: 10,
+    overflow: "hidden",
+  },
+  progressFill: { height: 8, borderRadius: 4, backgroundColor: colors.primary },
+  carousel: { gap: 12, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 12 },
+  tecCard: {
+    width: 170,
+    backgroundColor: colors.card,
+    borderRadius: radius.lg,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    padding: 14,
+  },
+  tecEmojiBox: {
+    height: 84,
+    borderRadius: radius.md,
+    backgroundColor: colors.primarySoft,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+  tecEmoji: { fontSize: 40 },
+  doneBadge: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  tecTitle: { color: colors.text, fontWeight: "800", fontSize: 15 },
+  tecSub: { color: colors.muted, fontSize: 13, marginTop: 4, lineHeight: 18 },
 });

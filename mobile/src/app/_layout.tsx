@@ -1,22 +1,23 @@
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useTheme } from "../lib/theme";
+import { colors } from "../lib/theme";
 
 export default function RootLayout() {
-  const t = useTheme();
   return (
     <>
-      <StatusBar style="auto" />
+      <StatusBar style="dark" />
       <Stack
         screenOptions={{
-          headerStyle: { backgroundColor: t.card },
-          headerTintColor: t.text,
-          contentStyle: { backgroundColor: t.bg },
+          headerStyle: { backgroundColor: colors.bg },
+          headerTintColor: colors.primaryDark,
+          headerTitleStyle: { fontWeight: "800", color: colors.text },
+          headerShadowVisible: false,
+          contentStyle: { backgroundColor: colors.bg },
         }}
       >
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="tecnica/[id]" options={{ title: "Técnica de estudo" }} />
-        <Stack.Screen name="pomodoro" options={{ title: "Pomodoro" }} />
+        <Stack.Screen name="tecnica/[id]" options={{ title: "" }} />
+        <Stack.Screen name="pomodoro" options={{ title: "Modo foco" }} />
         <Stack.Screen name="aula/[id]" options={{ title: "Videoaula" }} />
       </Stack>
     </>

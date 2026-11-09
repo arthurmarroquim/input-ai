@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Pressable, StyleSheet, Text, Vibration, View } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import GradientButton from "../components/GradientButton";
 import { useProgress } from "../lib/storage";
-import { useTheme } from "../lib/theme";
+import { colors, gradient, radius, shadow } from "../lib/theme";
 
 const MODOS = {
   foco: { label: "Foco", min: 25, frase: "Uma tarefa só. Celular longe. Você consegue! 💪" },
@@ -11,7 +13,6 @@ const MODOS = {
 type Modo = keyof typeof MODOS;
 
 export default function Pomodoro() {
-  const t = useTheme();
   const { addFocusSession } = useProgress();
   const [modo, setModo] = useState<Modo>("foco");
   const [restante, setRestante] = useState<number>(MODOS.foco.min * 60);
@@ -67,63 +68,98 @@ export default function Pomodoro() {
   const ss = String(restante % 60).padStart(2, "0");
   const total = MODOS[modo].min * 60;
   const pct = 1 - restante / total;
-  const cor = modo === "foco" ? t.accent : t.success;
 
   return (
-    <View style={[styles.page, { backgroundColor: t.bg }]}>
+    <View style={styles.page}>
       <View style={styles.tabs}>
         {(Object.keys(MODOS) as Modo[]).map((m) => (
-          <Pressable
-            key={m}
-            onPress={() => trocar(m)}
-            style={[styles.tab, { backgroundColor: m === modo ? cor : t.card, borderColor: t.border }]}
-          >
-            <Text style={{ color: m === modo ? "#fff" : t.text, fontWeight: "700" }}>{MODOS[m].label}</Text>
+          <Pressable key={m} onPress={() => trocar(m)} style={[styles.tab, m === modo && styles.tabActive]}>
+            <Text style={[styles.tabText, m === modo && { color: "#fff" }]}>{MODOS[m].label}</Text>
           </Pressable>
         ))}
       </View>
 
-      <View style={[styles.circle, { borderColor: t.border }]}>
-        <Text style={[styles.time, { color: t.text }]} accessibilityLabel={`${mm} minutos e ${ss} segundos`}>
-          {mm}:{ss}
-        </Text>
-        <View style={[styles.bar, { backgroundColor: t.border }]}>
-          <View style={[styles.fill, { width: `${pct * 100}%`, backgroundColor: cor }]} />
-        </View>
+      <View style={styles.outer}>
+        <LinearGradient
+          colors={gradient.hero}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.circle}
+        >
+          <Text style={styles.modeLabel}>{MODOS[modo].label.toUpperCase()}</Text>
+          <Text style={styles.time} accessibilityLabel={`${mm} minutos e ${ss} segundos`}>
+            {mm}:{ss}
+          </Text>
+          <View style={styles.bar}>
+            <View style={[styles.fill, { width: `${pct * 100}%` }]} />
+          </View>
+        </LinearGradient>
       </View>
 
-      <Text style={[styles.frase, { color: t.muted }]}>{MODOS[modo].frase}</Text>
+      <Text style={styles.frase}>{MODOS[modo].frase}</Text>
 
-      <Pressable onPress={iniciarPausar} style={[styles.btn, { backgroundColor: cor }]}>
-        <Text style={styles.btnText}>{rodando ? "Pausar" : restante < total ? "Continuar" : "Começar"}</Text>
-      </Pressable>
+      <GradientButton
+        title={rodando ? "⏸  Pausar" : restante < total ? "▶  Continuar" : "▶  Começar"}
+        onPress={iniciarPausar}
+        style={{ minWidth: 240 }}
+      />
       <Pressable onPress={() => trocar(modo)}>
-        <Text style={{ color: t.muted, padding: 12 }}>Reiniciar</Text>
+        <Text style={styles.reset}>↺ Reiniciar</Text>
       </Pressable>
 
-      <Text style={{ color: t.text, marginTop: 8 }}>
-        🍅 Pomodoros concluídos hoje nesta sessão: <Text style={{ fontWeight: "800" }}>{ciclos}</Text>
-      </Text>
+      <View style={styles.counter}>
+        <Text style={{ fontSize: 22 }}>{ciclos > 0 ? "🍅".repeat(Math.min(ciclos, 8)) : "🍅"}</Text>
+        <Text style={styles.counterText}>
+          {ciclos === 0
+            ? "Seu primeiro pomodoro te espera!"
+            : `${ciclos} pomodoro${ciclos > 1 ? "s" : ""} nesta sessão`}
+        </Text>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, alignItems: "center", padding: 20 },
-  tabs: { flexDirection: "row", gap: 8, marginBottom: 28 },
-  tab: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, borderWidth: 1 },
-  circle: {
-    width: 260,
-    height: 260,
-    borderRadius: 130,
-    borderWidth: 8,
-    alignItems: "center",
-    justifyContent: "center",
+  page: { flex: 1, alignItems: "center", padding: 20, backgroundColor: colors.bg },
+  tabs: {
+    flexDirection: "row",
+    padding: 5,
+    borderRadius: radius.pill,
+    backgroundColor: colors.primarySoft,
+    marginBottom: 32,
   },
-  time: { fontSize: 64, fontWeight: "800", fontVariant: ["tabular-nums"] },
-  bar: { width: 150, height: 6, borderRadius: 3, overflow: "hidden", marginTop: 8 },
-  fill: { height: 6 },
-  frase: { textAlign: "center", marginVertical: 24, fontSize: 15, maxWidth: 300 },
-  btn: { paddingVertical: 16, paddingHorizontal: 60, borderRadius: 16 },
-  btnText: { color: "#fff", fontSize: 18, fontWeight: "800" },
+  tab: { paddingHorizontal: 16, paddingVertical: 9, borderRadius: radius.pill },
+  tabActive: { backgroundColor: colors.primary },
+  tabText: { color: colors.primaryDark, fontWeight: "800" },
+  outer: { padding: 14, borderRadius: 160, backgroundColor: colors.primarySoft, ...shadow },
+  circle: { width: 250, height: 250, borderRadius: 125, alignItems: "center", justifyContent: "center" },
+  modeLabel: { color: "rgba(255,255,255,0.85)", fontWeight: "800", letterSpacing: 2, fontSize: 12 },
+  time: { color: "#fff", fontSize: 64, fontWeight: "900", fontVariant: ["tabular-nums"] },
+  bar: {
+    width: 140,
+    height: 6,
+    borderRadius: 3,
+    overflow: "hidden",
+    marginTop: 8,
+    backgroundColor: "rgba(255,255,255,0.3)",
+  },
+  fill: { height: 6, backgroundColor: "#fff" },
+  frase: {
+    textAlign: "center",
+    marginVertical: 28,
+    fontSize: 15,
+    maxWidth: 300,
+    color: colors.muted,
+    lineHeight: 21,
+  },
+  reset: { color: colors.primary, padding: 14, fontWeight: "700" },
+  counter: {
+    marginTop: 12,
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: colors.bgSoft,
+    padding: 14,
+    borderRadius: radius.md,
+  },
+  counterText: { color: colors.text, fontWeight: "600" },
 });
