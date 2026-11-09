@@ -58,7 +58,7 @@ export const normalizeEmail = (e) => String(e || "").trim().toLowerCase();
 
 /** Dados do usuário que podem ir para o app (sem hash de senha). */
 export function publicUser(u) {
-  return { id: u.id, name: u.name, email: u.email, role: u.role, createdAt: u.createdAt };
+  return { id: u.id, name: u.name, email: u.email, role: u.role, serie: u.serie ?? null, createdAt: u.createdAt };
 }
 
 export function validateRegistration({ name, email, password }) {
@@ -83,8 +83,26 @@ export function findByEmail(email) {
   return db.users.find((u) => u.email === e);
 }
 
-export async function createUser({ name, email, password, role = "aluno" }) {
+// Série do aluno: 1, 2 ou 3 (ano do ensino médio) ou "concluido" (já terminou / cursinho).
+export const SERIES = [1, 2, 3, "concluido"];
+export function parseSerie(v) {
+  if (v === "concluido") return "concluido";
+  const n = Number(v);
+  return [1, 2, 3].includes(n) ? n : undefined;
+}
+
+export async function updateProfile(id, { serie, name }) {
+  const u = db.users.find((x) => x.id === id);
+  if (!u) return null;
+  if (serie !== undefined) u.serie = serie;
+  if (name !== undefined) u.name = name;
+  await persist();
+  return u;
+}
+
+export async function createUser({ name, email, password, role = "aluno", serie = null }) {
   const user = {
+    serie,
     id: crypto.randomUUID(),
     name: String(name).trim(),
     email: normalizeEmail(email),

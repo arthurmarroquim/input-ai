@@ -35,8 +35,10 @@ export default function Home() {
   const { progress } = useProgress();
   const { user } = useAuth();
   const { status: topicos } = useTopics();
+  // Progresso da série do aluno (ou de todo o Ensino Médio, para quem já concluiu)
+  const serieEM = user?.serie === 1 || user?.serie === 2 || user?.serie === 3 ? user.serie : null;
   const enem = resumo(
-    ASSUNTOS.map((a) => a.id),
+    ASSUNTOS.filter((a) => !serieEM || a.serie === serieEM).map((a) => a.id),
     topicos,
   );
   const primeiroNome = user?.name.split(/\s+/)[0] ?? "";
@@ -117,7 +119,9 @@ export default function Home() {
             style={styles.progInner}
           >
             <View style={{ flex: 1 }}>
-              <Text style={styles.progKicker}>PROGRESSO ENEM</Text>
+              <Text style={styles.progKicker}>
+                {serieEM ? `PROGRESSO DO ${serieEM}º ANO · SSA ${serieEM}` : "PROGRESSO ENEM"}
+              </Text>
               <Text style={styles.progValue}>{enem.pct}% dos assuntos</Text>
               <View style={styles.progTrack}>
                 <View style={[styles.progFill, { width: `${enem.pct}%` }]} />
@@ -129,6 +133,23 @@ export default function Home() {
             <Ionicons name="stats-chart" size={34} color="rgba(255,255,255,0.9)" />
           </LinearGradient>
         </Pressable>
+
+        {!user?.serie && (
+          <Pressable
+            onPress={() => router.push("/perfil")}
+            style={styles.semSerie}
+            accessibilityRole="button"
+          >
+            <Text style={{ fontSize: 22 }}>🎒</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.semSerieTitle}>Qual série você está cursando?</Text>
+              <Text style={styles.semSerieSub}>
+                Informe no Perfil para ver os assuntos da BNCC da sua série.
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.primary} />
+          </Pressable>
+        )}
 
         {/* Atalhos */}
         <Text style={styles.section}>O que vamos fazer hoje?</Text>
@@ -194,6 +215,19 @@ export default function Home() {
 }
 
 const styles = StyleSheet.create({
+  semSerie: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 14,
+    marginTop: 12,
+    borderRadius: radius.lg,
+    borderWidth: 2,
+    borderColor: colors.primaryLight,
+    backgroundColor: colors.primarySoft,
+  },
+  semSerieTitle: { color: colors.text, fontWeight: "900" },
+  semSerieSub: { color: colors.muted, fontSize: 13, marginTop: 2 },
   prog: { marginTop: 14, borderRadius: radius.lg, ...shadow },
   progInner: { flexDirection: "row", alignItems: "center", gap: 12, padding: 18, borderRadius: radius.lg },
   progKicker: { color: "rgba(255,255,255,0.9)", fontWeight: "900", fontSize: 12, letterSpacing: 1 },

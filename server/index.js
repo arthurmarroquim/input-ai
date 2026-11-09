@@ -96,13 +96,15 @@ function tooManyAttempts(key) {
 
 app.post("/api/auth/register", async (req, res) => {
   const { name, email, password } = req.body || {};
+  const serie = auth.parseSerie(req.body?.serie);
   if (tooManyAttempts(`reg:${req.ip}`)) {
     return res.status(429).json({ error: "Muitas tentativas. Espere alguns minutos." });
   }
   const invalid = auth.validateRegistration({ name, email, password });
   if (invalid) return res.status(400).json({ error: invalid });
+  if (serie === undefined) return res.status(400).json({ error: "Escolha a série que você está cursando." });
   if (auth.findByEmail(email)) return res.status(409).json({ error: "Este e-mail já tem cadastro. Faça login." });
-  const user = await auth.createUser({ name, email, password });
+  const user = await auth.createUser({ name, email, password, serie });
   const token = await auth.createSession(user.id);
   res.status(201).json({ token, user: auth.publicUser(user) });
 });
@@ -119,6 +121,23 @@ app.post("/api/auth/login", async (req, res) => {
 });
 
 app.get("/api/auth/me", requireAuth, (req, res) => res.json({ user: auth.publicUser(req.user) }));
+
+// Atualiza dados do próprio perfil (série e nome).
+app.patch("/api/auth/me", requireAuth, async (req, res) => {
+  const changes = {};
+  if ("serie" in (req.body || {})) {
+    const serie = auth.parseSerie(req.body.serie);
+    if (serie === undefined) return res.status(400).json({ error: "Série inválida." });
+    changes.serie = serie;
+  }
+  if ("name" in (req.body || {})) {
+    const name = String(req.body.name || "").trim();
+    if (name.length < 2 || name.length > 80) return res.status(400).json({ error: "Nome inválido." });
+    changes.name = name;
+  }
+  const u = await auth.updateProfile(req.user.id, changes);
+  res.json({ user: auth.publicUser(u) });
+});
 
 app.post("/api/auth/logout", requireAuth, async (req, res) => {
   await auth.deleteSession(bearer(req));

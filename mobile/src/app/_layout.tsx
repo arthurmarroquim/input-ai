@@ -47,6 +47,8 @@ function RootStack() {
         <Stack.Screen name="pomodoro" options={{ title: "Modo foco" }} />
         <Stack.Screen name="aula/[id]" options={{ title: "Videoaula" }} />
         <Stack.Screen name="senha" options={{ title: "Trocar senha" }} />
+        <Stack.Screen name="bncc" options={{ title: "Minha série na BNCC" }} />
+        <Stack.Screen name="assunto/[id]" options={{ title: "Assunto" }} />
         <Stack.Protected guard={user?.role === "admin"}>
           <Stack.Screen name="admin" options={{ title: "Painel do administrador" }} />
         </Stack.Protected>

@@ -41,10 +41,11 @@ let nextId = 0;
 const uid = () => `${Date.now()}-${nextId++}`;
 
 export default function Tutor() {
-  const { assunto, topico, exame } = useLocalSearchParams<{
+  const { assunto, topico, exame, bncc } = useLocalSearchParams<{
     assunto?: string;
     topico?: string;
     exame?: string;
+    bncc?: string;
   }>();
   const [messages, setMessages] = useState<ChatMessage[]>([BOAS_VINDAS]);
   const [texto, setTexto] = useState("");
@@ -57,9 +58,9 @@ export default function Tutor() {
     if (assunto) setTexto(`Tenho uma dúvida sobre a aula "${assunto}": `);
     else if (topico)
       setTexto(
-        `Quero estudar "${topico}"${exame ? ` para o ${exame}` : ""}. Me explique o essencial e depois me faça 3 perguntas para eu testar o que aprendi.`,
+        `Quero estudar "${topico}"${exame ? ` para o ${exame}` : ""}${bncc ? ` (habilidades da BNCC: ${bncc})` : ""}. Me explique o essencial e depois me faça 3 perguntas para eu testar o que aprendi.`,
       );
-  }, [assunto, topico, exame]);
+  }, [assunto, topico, exame, bncc]);
 
   async function escolherImagem(origem: "camera" | "galeria") {
     const opts: ImagePicker.ImagePickerOptions = {

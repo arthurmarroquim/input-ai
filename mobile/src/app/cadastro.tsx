@@ -2,6 +2,8 @@ import { router } from "expo-router";
 import { useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import AuthShell from "../components/AuthShell";
+import SerieSelector from "../components/SerieSelector";
+import type { Serie } from "../lib/api";
 import Field from "../components/Field";
 import GradientButton from "../components/GradientButton";
 import { useAuth } from "../lib/auth";
@@ -9,8 +11,9 @@ import { colors } from "../lib/theme";
 import { authStyles as styles } from "../components/authStyles";
 
 // Mesmas regras do servidor, para avisar antes de enviar.
-function validar(nome: string, email: string, senha: string, confirma: string) {
+function validar(nome: string, email: string, senha: string, confirma: string, serie: Serie | null) {
   if (nome.trim().length < 2) return "Informe seu nome.";
+  if (!serie) return "Escolha a série que você está cursando.";
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return "E-mail inválido.";
   if (senha.length < 8) return "A senha precisa ter pelo menos 8 caracteres.";
   if (!/[A-Za-z]/.test(senha) || !/\d/.test(senha)) return "Use letras e números na senha.";
@@ -24,6 +27,7 @@ export default function Cadastro() {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [confirma, setConfirma] = useState("");
+  const [serie, setSerie] = useState<Serie | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
 
@@ -32,12 +36,12 @@ export default function Cadastro() {
   ).length;
 
   async function criar() {
-    const invalido = validar(nome, email, senha, confirma);
+    const invalido = validar(nome, email, senha, confirma, serie);
     if (invalido) return setErro(invalido);
     setErro(null);
     setEnviando(true);
     try {
-      await signUp(nome, email, senha);
+      await signUp(nome, email, senha, serie!);
     } catch (e) {
       setErro((e as Error).message);
     } finally {
@@ -56,6 +60,14 @@ export default function Cadastro() {
         autoComplete="name"
         textContentType="name"
       />
+      <Text style={{ color: colors.text, fontWeight: "700", marginBottom: 6, marginLeft: 4 }}>
+        Qual série você está cursando?
+      </Text>
+      <Text style={{ color: colors.muted, fontSize: 13, marginBottom: 10, marginLeft: 4 }}>
+        Usamos para indicar os assuntos, habilidades e competências da BNCC para você.
+      </Text>
+      <SerieSelector value={serie} onChange={setSerie} />
+      <View style={{ height: 16 }} />
       <Field
         label="E-mail"
         icon="mail-outline"

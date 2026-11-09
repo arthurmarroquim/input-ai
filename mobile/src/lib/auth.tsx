@@ -8,7 +8,8 @@ type AuthState = {
   user: api.User | null;
   loading: boolean; // true enquanto verifica se já existe um login salvo
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (name: string, email: string, password: string) => Promise<void>;
+  signUp: (name: string, email: string, password: string, serie: api.Serie) => Promise<void>;
+  updateProfile: (changes: { serie?: api.Serie; name?: string }) => Promise<void>;
   signOut: () => Promise<void>;
   updateToken: (token: string) => Promise<void>;
 };
@@ -62,11 +63,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { token, user: u } = await api.login(email.trim(), password);
         await applySession(token, u);
       },
-      signUp: async (name, email, password) => {
-        const { token, user: u } = await api.register(name.trim(), email.trim(), password);
+      signUp: async (name, email, password, serie) => {
+        const { token, user: u } = await api.register(name.trim(), email.trim(), password, serie);
         await applySession(token, u);
       },
       signOut,
+      updateProfile: async (changes) => {
+        const { user: u } = await api.updateMe(changes);
+        setUser(u);
+      },
       updateToken: async (token) => {
         api.setAuthToken(token);
         await saveToken(token);

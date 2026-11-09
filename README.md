@@ -4,6 +4,7 @@ Aplicativo para celular que ajuda estudantes a **aprenderem a estudar**, com:
 
 - **Login e cadastro**: conta com e-mail e senha, perfil, troca de senha e **painel do administrador** (listar, promover e excluir usuários).
 
+- **Série do aluno + BNCC**: no cadastro o aluno informa a série (1º, 2º ou 3º ano do Ensino Médio, ou já concluído). A tela *Minha série na BNCC* indica os assuntos da série e mostra as habilidades (códigos EM13…), as competências específicas de cada área e as competências gerais, com o progresso de cada uma. Cada assunto tem uma página com as habilidades e competências relacionadas. A relação está em `mobile/src/data/bncc.ts` (textos resumidos; o texto oficial está em basenacionalcomum.mec.gov.br).
 - **Painel de progresso ENEM e SSA**: o aluno marca cada assunto como *a estudar*, *estudando* ou *dominado* e acompanha o progresso por área do ENEM e por fase do SSA (UPE: SSA 1, 2 e 3), com sugestão do próximo assunto e atalhos para o Tutor IA e as videoaulas. Os 140 assuntos ficam em `mobile/src/data/conteudos.ts` (confira e ajuste conforme a matriz do ENEM e o edital do SSA do ano).
 - **Aprenda a estudar**: técnicas explicadas passo a passo (Pomodoro, recordação ativa, repetição espaçada, Feynman, mapa mental, intercalação e planejamento), dica do dia e progresso (dias seguidos, minutos de foco, técnicas aprendidas).
 - **Pomodoro**: timer de foco/pausa que registra seu tempo de estudo.
@@ -67,8 +68,8 @@ Para gerar o app instalável (APK/AAB/IPA): `npx eas-cli@latest build`.
 
 Tutor e vídeos exigem login (`Authorization: Bearer <token>`).
 
-- `POST /api/auth/register` `{ name, email, password }` e `POST /api/auth/login` `{ email, password }` → `{ token, user }`
-- `GET /api/auth/me`, `POST /api/auth/logout`, `POST /api/auth/password` `{ currentPassword, newPassword }`
+- `POST /api/auth/register` `{ name, email, password, serie }` e `POST /api/auth/login` `{ email, password }` → `{ token, user }`
+- `GET /api/auth/me`, `PATCH /api/auth/me` `{ serie?: 1 | 2 | 3 | "concluido", name? }`, `POST /api/auth/logout`, `POST /api/auth/password` `{ currentPassword, newPassword }`
 - Progresso: `GET /api/topics` → `{ status: { [assuntoId]: 1 | 2 } }`, `PUT /api/topics/:id` `{ status: 0 | 1 | 2 }`
 - Admin: `GET /api/admin/users`, `PATCH /api/admin/users/:id` `{ role: "aluno" | "admin" }`, `DELETE /api/admin/users/:id`
 

@@ -16,7 +16,10 @@ import {
   materiaPorId,
   MATERIAS,
 } from "../../data/conteudos";
+import { habilidadesDo } from "../../data/bncc";
 import { TopicStatus } from "../../lib/api";
+import { useAuth } from "../../lib/auth";
+import { exameDaSerie, nomeSerie } from "../../lib/serie";
 import { colors, gradient, radius, shadow } from "../../lib/theme";
 import { resumo, useTopics } from "../../lib/topics";
 
@@ -36,7 +39,9 @@ const proximo = (s: TopicStatus): TopicStatus => ((s + 1) % 3) as TopicStatus;
 export default function Progresso() {
   const insets = useSafeAreaInsets();
   const { status, loading, error, setStatus, reload } = useTopics();
-  const [exame, setExame] = useState<ExamId>("enem");
+  const { user } = useAuth();
+  // Começa pela prova da série do aluno (1º ano → SSA 1 …; concluído → ENEM).
+  const [exame, setExame] = useState<ExamId>(exameDaSerie(user?.serie));
   const [filtro, setFiltro] = useState<Filtro>("todos");
   const [aberta, setAberta] = useState<string | null>(null);
 
@@ -94,7 +99,16 @@ export default function Progresso() {
   }, [assuntos, porMateria, status]);
 
   function estudarComTutor(a: Assunto) {
-    router.push({ pathname: "/tutor", params: { topico: a.nome, exame: exameInfo.nome } });
+    router.push({
+      pathname: "/tutor",
+      params: {
+        topico: a.nome,
+        exame: exameInfo.nome,
+        bncc: habilidadesDo(a.id)
+          .map((h) => h.codigo)
+          .join(", "),
+      },
+    });
   }
   function verAulas(a: Assunto) {
     router.push({ pathname: "/aulas", params: { q: `${a.nome} ${materiaPorId[a.materia].nome}` } });
@@ -168,6 +182,26 @@ export default function Progresso() {
             <Text style={styles.erroText}>⚠️ {error} Toque para tentar de novo.</Text>
           </Pressable>
         )}
+
+        {/* Atalho para a visão da BNCC da série do aluno */}
+        <Pressable
+          onPress={() => router.push("/bncc")}
+          style={({ pressed }) => [styles.bncc, pressed && { opacity: 0.9 }]}
+          accessibilityRole="button"
+        >
+          <View style={styles.bnccIcon}>
+            <Ionicons name="document-text" size={22} color={colors.primary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.bnccTitle}>Minha série na BNCC</Text>
+            <Text style={styles.bnccSub}>
+              {user?.serie
+                ? `${nomeSerie(user.serie, true)}: assuntos, habilidades e competências`
+                : "Informe sua série no Perfil para ver o que estudar"}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color={colors.primary} />
+        </Pressable>
 
         {/* Próximo passo */}
         {sugestao && (
@@ -311,7 +345,12 @@ export default function Progresso() {
                         <Ionicons name={info.icon} size={26} color={info.cor} />
                       </Pressable>
                       <View style={{ flex: 1 }}>
-                        <Text style={[styles.topicName, st === 2 && styles.topicDone]}>{a.nome}</Text>
+                        <Text
+                          onPress={() => router.push({ pathname: "/assunto/[id]", params: { id: a.id } })}
+                          style={[styles.topicName, st === 2 && styles.topicDone]}
+                        >
+                          {a.nome}
+                        </Text>
                         <Text style={[styles.topicMeta, { color: info.cor }]}>
                           {info.label}
                           {exame === "enem" ? ` · ${a.serie}ª série` : ""}
@@ -368,6 +407,25 @@ function Contador({
 }
 
 const styles = StyleSheet.create({
+  bncc: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 14,
+    marginTop: 18,
+    borderRadius: radius.lg,
+    backgroundColor: colors.primarySoft,
+  },
+  bnccIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  bnccTitle: { color: colors.text, fontWeight: "900", fontSize: 16 },
+  bnccSub: { color: colors.muted, fontSize: 13, marginTop: 2 },
   hero: {
     paddingHorizontal: 20,
     paddingBottom: 26,

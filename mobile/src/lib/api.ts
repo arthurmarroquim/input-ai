@@ -7,7 +7,15 @@ export type ChatImage = { base64: string; mediaType: string; uri: string };
 export type ChatMessage = { id: string; role: "user" | "assistant"; text: string; image?: ChatImage };
 export type Video = { id: string; title: string; channel: string; thumbnail: string };
 export type Role = "aluno" | "admin";
-export type User = { id: string; name: string; email: string; role: Role; createdAt: string };
+export type Serie = 1 | 2 | 3 | "concluido";
+export type User = {
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+  serie: Serie | null;
+  createdAt: string;
+};
 
 // Token da sessão atual, definido pelo AuthProvider.
 let authToken: string | null = null;
@@ -56,8 +64,10 @@ const post = <T>(path: string, body: unknown) =>
 export const login = (email: string, password: string) =>
   post<{ token: string; user: User }>("/api/auth/login", { email, password });
 
-export const register = (name: string, email: string, password: string) =>
-  post<{ token: string; user: User }>("/api/auth/register", { name, email, password });
+export const register = (name: string, email: string, password: string, serie: Serie) =>
+  post<{ token: string; user: User }>("/api/auth/register", { name, email, password, serie });
+export const updateMe = (changes: { serie?: Serie; name?: string }) =>
+  request<{ user: User }>("/api/auth/me", { method: "PATCH", body: JSON.stringify(changes) });
 
 export const me = () => request<{ user: User }>("/api/auth/me");
 export const logout = () => post<{ ok: true }>("/api/auth/logout", {});

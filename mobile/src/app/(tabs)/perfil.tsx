@@ -1,7 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
+import { useState } from "react";
 import { Alert, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import SerieSelector from "../../components/SerieSelector";
+import type { Serie } from "../../lib/api";
+import { nomeSerie } from "../../lib/serie";
 import { TECNICAS } from "../../data/tecnicas";
 import { useAuth } from "../../lib/auth";
 import { streak, useProgress } from "../../lib/storage";
@@ -10,9 +14,21 @@ import { colors, gradient, radius, shadow } from "../../lib/theme";
 type IconName = React.ComponentProps<typeof Ionicons>["name"];
 
 export default function Perfil() {
-  const { user, signOut } = useAuth();
+  const { user, signOut, updateProfile } = useAuth();
   const { progress } = useProgress();
+  const [editandoSerie, setEditandoSerie] = useState(false);
+  const [erroSerie, setErroSerie] = useState<string | null>(null);
   if (!user) return null;
+
+  async function mudarSerie(s: Serie) {
+    setErroSerie(null);
+    try {
+      await updateProfile({ serie: s });
+      setEditandoSerie(false);
+    } catch (e) {
+      setErroSerie((e as Error).message);
+    }
+  }
   const iniciais = user.name
     .split(/\s+/)
     .slice(0, 2)
@@ -42,6 +58,32 @@ export default function Perfil() {
         </View>
       </View>
 
+      {/* Série (usada para indicar assuntos, habilidades e competências da BNCC) */}
+      <View style={styles.serieCard}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <View style={styles.serieIcon}>
+            <Ionicons name="school" size={20} color={colors.primary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.serieLabel}>Série</Text>
+            <Text style={[styles.serieValue, !user.serie && { color: "#C2365B" }]}>
+              {nomeSerie(user.serie, true)}
+            </Text>
+          </View>
+          <Pressable onPress={() => setEditandoSerie((v) => !v)} hitSlop={8}>
+            <Text style={styles.serieEdit}>
+              {editandoSerie ? "Fechar" : user.serie ? "Alterar" : "Informar"}
+            </Text>
+          </Pressable>
+        </View>
+        {editandoSerie && (
+          <View style={{ marginTop: 14 }}>
+            <SerieSelector value={user.serie} onChange={mudarSerie} />
+            {erroSerie && <Text style={{ color: "#B4234A", marginTop: 8 }}>⚠️ {erroSerie}</Text>}
+          </View>
+        )}
+      </View>
+
       <View style={styles.stats}>
         <Stat value={`🔥 ${streak(progress.studyDays)}`} label="dias seguidos" />
         <Stat value={`${progress.focusMinutes}`} label="min de foco" />
@@ -57,6 +99,12 @@ export default function Perfil() {
           strong
         />
       )}
+      <Item
+        icon="document-text-outline"
+        label="Minha série na BNCC"
+        sub="Assuntos, habilidades e competências"
+        onPress={() => router.push("/bncc")}
+      />
       <Item icon="key-outline" label="Trocar senha" onPress={() => router.push("/senha")} />
       <Item icon="log-out-outline" label="Sair da conta" onPress={sair} danger />
     </ScrollView>
@@ -112,6 +160,18 @@ function Item(props: {
 }
 
 const styles = StyleSheet.create({
+  serieCard: { borderRadius: radius.lg, padding: 14, backgroundColor: colors.primarySoft },
+  serieIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  serieLabel: { color: colors.muted, fontSize: 12, fontWeight: "700" },
+  serieValue: { color: colors.text, fontWeight: "800", fontSize: 15 },
+  serieEdit: { color: colors.primary, fontWeight: "800" },
   page: { padding: 20, paddingTop: 8, gap: 12 },
   card: { alignItems: "center", backgroundColor: colors.card, borderRadius: radius.xl, padding: 24 },
   avatar: { width: 84, height: 84, borderRadius: 42, alignItems: "center", justifyContent: "center" },

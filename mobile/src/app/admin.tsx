@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { adminDeleteUser, adminListUsers, adminSetRole, User } from "../lib/api";
 import { useAuth } from "../lib/auth";
+import { nomeSerie } from "../lib/serie";
 import { colors, radius } from "../lib/theme";
 
 // Confirmação que funciona no celular e na web.
@@ -140,7 +141,7 @@ export default function Admin() {
                 {u.email}
               </Text>
               <Text style={styles.meta}>
-                {u.role === "admin" ? "🛡️ Admin" : "🎒 Estudante"} · desde{" "}
+                {u.role === "admin" ? "🛡️ Admin" : `🎒 ${nomeSerie(u.serie)}`} · desde{" "}
                 {new Date(u.createdAt).toLocaleDateString("pt-BR")}
               </Text>
             </View>
