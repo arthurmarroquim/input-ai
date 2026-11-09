@@ -1,6 +1,10 @@
+import { Platform } from "react-native";
+
 // Comunicação com o backend do ENSINA A.I (pasta /server).
 // As chaves das APIs (Claude e YouTube) ficam no servidor, nunca no app.
-export const API_URL = (process.env.EXPO_PUBLIC_API_URL || "http://localhost:3333").replace(/\/$/, "");
+// Na versão web servida pelo próprio servidor, a API fica no mesmo endereço da página.
+const sameOrigin = Platform.OS === "web" && typeof window !== "undefined" ? window.location.origin : "";
+export const API_URL = (process.env.EXPO_PUBLIC_API_URL || sameOrigin || "http://localhost:3333").replace(/\/$/, "");
 
 export type TutorMode = "dica" | "explicar";
 export type ChatImage = { base64: string; mediaType: string; uri: string };

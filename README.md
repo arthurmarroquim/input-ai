@@ -64,6 +64,13 @@ No celular físico, use o **IP da sua máquina na rede** em `EXPO_PUBLIC_API_URL
 
 Para gerar o app instalável (APK/AAB/IPA): `npx eas-cli@latest build`.
 
+### Versão web num endereço só (teste no navegador do celular)
+
+```bash
+cd mobile && npx expo export --platform web --output-dir ../web-build
+cd ../server && WEB_DIR=../web-build npm start   # app e API em http://SEU_IP:3333
+```
+
 ## Endpoints da API
 
 Tutor e vídeos exigem login (`Authorization: Bearer <token>`).

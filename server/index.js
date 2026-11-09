@@ -4,6 +4,7 @@
 // As chaves de API ficam SOMENTE aqui no servidor, nunca no aplicativo.
 import Anthropic from "@anthropic-ai/sdk";
 import express from "express";
+import path from "node:path";
 import * as auth from "./auth.js";
 
 const PORT = Number(process.env.PORT || 3333);
@@ -304,6 +305,17 @@ function decodeEntities(s = "") {
     .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">");
+}
+
+// Opcional: servir a versão web do app (pasta gerada por `npx expo export --platform web`).
+// Assim app e API ficam no mesmo endereço — útil para testar no navegador do celular.
+if (process.env.WEB_DIR) {
+  const webDir = path.resolve(process.env.WEB_DIR);
+  app.use(express.static(webDir));
+  app.use((req, res, next) => {
+    if (req.method !== "GET" || req.path.startsWith("/api/")) return next();
+    res.sendFile(path.join(webDir, "index.html"));
+  });
 }
 
 await auth.ensureAdmin();
