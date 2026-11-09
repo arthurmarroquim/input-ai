@@ -4,6 +4,7 @@
 // As chaves de API ficam SOMENTE aqui no servidor, nunca no aplicativo.
 import Anthropic from "@anthropic-ai/sdk";
 import express from "express";
+import * as auth from "./auth.js";
 
 const PORT = Number(process.env.PORT || 3333);
 const MODEL = "claude-opus-5-5";
@@ -19,8 +20,8 @@ app.use(express.json({ limit: "15mb" }));
 // CORS liberado para o app (Expo Go / web) conseguir chamar o servidor.
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS");
   if (req.method === "OPTIONS") return res.sendStatus(204);
   next();
 });
@@ -67,11 +68,105 @@ function toClaudeMessages(history, mode) {
   return out;
 }
 
+// ---------- Autenticação ----------
+
+const bearer = (req) => (req.headers.authorization || "").replace(/^Bearer\s+/i, "") || null;
+
+function requireAuth(req, res, next) {
+  const user = auth.userFromToken(bearer(req));
+  if (!user) return res.status(401).json({ error: "Faça login para continuar." });
+  req.user = user;
+  next();
+}
+
+function requireAdmin(req, res, next) {
+  if (req.user?.role !== "admin") return res.status(403).json({ error: "Acesso só para administradores." });
+  next();
+}
+
+// Limite simples de tentativas para dificultar adivinhação de senha.
+const attempts = new Map();
+function tooManyAttempts(key) {
+  const now = Date.now();
+  const list = (attempts.get(key) || []).filter((t) => now - t < 15 * 60_000);
+  list.push(now);
+  attempts.set(key, list);
+  return list.length > 10;
+}
+
+app.post("/api/auth/register", async (req, res) => {
+  const { name, email, password } = req.body || {};
+  if (tooManyAttempts(`reg:${req.ip}`)) {
+    return res.status(429).json({ error: "Muitas tentativas. Espere alguns minutos." });
+  }
+  const invalid = auth.validateRegistration({ name, email, password });
+  if (invalid) return res.status(400).json({ error: invalid });
+  if (auth.findByEmail(email)) return res.status(409).json({ error: "Este e-mail já tem cadastro. Faça login." });
+  const user = await auth.createUser({ name, email, password });
+  const token = await auth.createSession(user.id);
+  res.status(201).json({ token, user: auth.publicUser(user) });
+});
+
+app.post("/api/auth/login", async (req, res) => {
+  const { email, password } = req.body || {};
+  if (tooManyAttempts(`login:${req.ip}:${auth.normalizeEmail(email)}`)) {
+    return res.status(429).json({ error: "Muitas tentativas. Espere 15 minutos e tente de novo." });
+  }
+  const user = await auth.checkLogin(email, String(password || ""));
+  if (!user) return res.status(401).json({ error: "E-mail ou senha incorretos." });
+  const token = await auth.createSession(user.id);
+  res.json({ token, user: auth.publicUser(user) });
+});
+
+app.get("/api/auth/me", requireAuth, (req, res) => res.json({ user: auth.publicUser(req.user) }));
+
+app.post("/api/auth/logout", requireAuth, async (req, res) => {
+  await auth.deleteSession(bearer(req));
+  res.json({ ok: true });
+});
+
+app.post("/api/auth/password", requireAuth, async (req, res) => {
+  const { currentPassword, newPassword } = req.body || {};
+  const ok = await auth.checkLogin(req.user.email, String(currentPassword || ""));
+  if (!ok) return res.status(400).json({ error: "Senha atual incorreta." });
+  const invalid = auth.validatePassword(newPassword);
+  if (invalid) return res.status(400).json({ error: invalid });
+  await auth.changePassword(req.user.id, newPassword);
+  const token = await auth.createSession(req.user.id);
+  res.json({ token });
+});
+
+// ---------- Administração ----------
+
+app.get("/api/admin/users", requireAuth, requireAdmin, (_req, res) => {
+  res.json({ users: auth.listUsers() });
+});
+
+app.patch("/api/admin/users/:id", requireAuth, requireAdmin, async (req, res) => {
+  const role = req.body?.role;
+  if (!["aluno", "admin"].includes(role)) return res.status(400).json({ error: "Papel inválido." });
+  if (req.params.id === req.user.id && role !== "admin") {
+    return res.status(400).json({ error: "Você não pode remover seu próprio acesso de administrador." });
+  }
+  const u = await auth.setRole(req.params.id, role);
+  if (!u) return res.status(404).json({ error: "Usuário não encontrado." });
+  res.json({ user: auth.publicUser(u) });
+});
+
+app.delete("/api/admin/users/:id", requireAuth, requireAdmin, async (req, res) => {
+  if (req.params.id === req.user.id) return res.status(400).json({ error: "Você não pode excluir a própria conta aqui." });
+  const ok = await auth.deleteUser(req.params.id);
+  if (!ok) return res.status(404).json({ error: "Usuário não encontrado." });
+  res.json({ ok: true });
+});
+
+// ---------- Saúde ----------
+
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true, ai: hasAnthropicCredentials, youtube: Boolean(YOUTUBE_API_KEY) });
 });
 
-app.post("/api/tutor", async (req, res) => {
+app.post("/api/tutor", requireAuth, async (req, res) => {
   const { messages, mode } = req.body || {};
   if (!Array.isArray(messages) || messages.length === 0) {
     return res.status(400).json({ error: "Envie ao menos uma mensagem." });
@@ -125,7 +220,7 @@ app.post("/api/tutor", async (req, res) => {
   }
 });
 
-app.get("/api/videos", async (req, res) => {
+app.get("/api/videos", requireAuth, async (req, res) => {
   const q = String(req.query.q || "").trim().slice(0, 100);
   const tipo = req.query.tipo === "short" ? "short" : "aula";
   if (!q) return res.status(400).json({ error: "Informe o assunto (q)." });
@@ -179,6 +274,8 @@ function decodeEntities(s = "") {
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">");
 }
+
+await auth.ensureAdmin();
 
 app.listen(PORT, () => {
   console.log(`Estude A.I. API rodando em http://localhost:${PORT}`);

@@ -46,6 +46,10 @@ export default function TabsLayout() {
         name="tutor"
         options={{ title: "Tutor IA", headerTitle: "Tutor IA ✨", tabBarIcon: icon("sparkles") }}
       />
+      <Tabs.Screen
+        name="perfil"
+        options={{ title: "Perfil", headerTitle: "Meu perfil", tabBarIcon: icon("person") }}
+      />
     </Tabs>
   );
 }

@@ -36,7 +36,7 @@ export function streak(days: string[]) {
 
 async function load(): Promise<Progress> {
   try {
-    const raw = await AsyncStorage.getItem(KEY);
+    const raw = await AsyncStorage.getItem(storageKey());
     return raw ? { ...empty, ...JSON.parse(raw) } : empty;
   } catch {
     return empty;
@@ -45,7 +45,7 @@ async function load(): Promise<Progress> {
 
 async function save(p: Progress) {
   try {
-    await AsyncStorage.setItem(KEY, JSON.stringify(p));
+    await AsyncStorage.setItem(storageKey(), JSON.stringify(p));
   } catch {
     // sem armazenamento disponível: segue só em memória
   }
@@ -54,6 +54,24 @@ async function save(p: Progress) {
 const listeners = new Set<(p: Progress) => void>();
 let current: Progress = empty;
 let loaded = false;
+let owner: string | null = null;
+
+// Cada usuário tem seu próprio progresso salvo no aparelho.
+const storageKey = () => `${KEY}:${owner ?? "anon"}`;
+
+export function setProgressOwner(userId: string | null) {
+  if (userId === owner && loaded) return;
+  owner = userId;
+  current = empty;
+  loaded = false;
+  listeners.forEach((l) => l(current));
+  load().then((p) => {
+    if (owner !== userId) return;
+    current = p;
+    loaded = true;
+    listeners.forEach((l) => l(current));
+  });
+}
 
 async function update(fn: (p: Progress) => Progress) {
   if (!loaded) {

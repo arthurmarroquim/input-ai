@@ -4,6 +4,7 @@ import { router } from "expo-router";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TECNICAS, dicaDoDia } from "../../data/tecnicas";
+import { useAuth } from "../../lib/auth";
 import { streak, useProgress } from "../../lib/storage";
 import { colors, gradient, radius, shadow } from "../../lib/theme";
 
@@ -29,6 +30,8 @@ function saudacao() {
 export default function Home() {
   const insets = useSafeAreaInsets();
   const { progress } = useProgress();
+  const { user } = useAuth();
+  const primeiroNome = user?.name.split(/\s+/)[0] ?? "";
   const dias = streak(progress.studyDays);
   const pctTecnicas = progress.learned.length / TECNICAS.length;
 
@@ -43,7 +46,10 @@ export default function Home() {
       >
         <View style={styles.heroTop}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.hello}>{saudacao()}! 👋</Text>
+            <Text style={styles.hello}>
+              {saudacao()}
+              {primeiroNome ? `, ${primeiroNome}` : ""}! 👋
+            </Text>
             <Text style={styles.heroTitle}>Bora estudar{"\n"}do jeito certo?</Text>
           </View>
           <View style={styles.streak}>

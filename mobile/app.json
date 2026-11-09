@@ -35,7 +35,8 @@
           "cameraPermission": "O Estude A.I. usa a câmera para fotografar exercícios e tirar dúvidas com o Tutor IA.",
           "photosPermission": "O Estude A.I. acessa suas fotos para você enviar exercícios ao Tutor IA."
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "scheme": "estudeai"
   }
