@@ -35,6 +35,10 @@ export default function TabsLayout() {
     >
       <Tabs.Screen name="index" options={{ title: "Início", headerShown: false, tabBarIcon: icon("home") }} />
       <Tabs.Screen
+        name="progresso"
+        options={{ title: "Progresso", headerShown: false, tabBarIcon: icon("stats-chart") }}
+      />
+      <Tabs.Screen
         name="shorts"
         options={{ title: "Shorts", headerShown: false, tabBarIcon: icon("play-circle") }}
       />

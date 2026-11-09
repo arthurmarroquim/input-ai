@@ -21,7 +21,7 @@ app.use(express.json({ limit: "15mb" }));
 app.use((req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  res.setHeader("Access-Control-Allow-Methods", "GET,POST,PATCH,DELETE,OPTIONS");
+  res.setHeader("Access-Control-Allow-Methods", "GET,POST,PUT,PATCH,DELETE,OPTIONS");
   if (req.method === "OPTIONS") return res.sendStatus(204);
   next();
 });
@@ -134,6 +134,18 @@ app.post("/api/auth/password", requireAuth, async (req, res) => {
   await auth.changePassword(req.user.id, newPassword);
   const token = await auth.createSession(req.user.id);
   res.json({ token });
+});
+
+// ---------- Progresso por assunto ----------
+
+app.get("/api/topics", requireAuth, (req, res) => {
+  res.json({ status: auth.getTopics(req.user.id) });
+});
+
+app.put("/api/topics/:id", requireAuth, async (req, res) => {
+  const err = await auth.setTopic(req.user.id, req.params.id, Number(req.body?.status));
+  if (err) return res.status(400).json({ error: err });
+  res.json({ ok: true });
 });
 
 // ---------- Administração ----------

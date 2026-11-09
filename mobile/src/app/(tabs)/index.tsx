@@ -4,7 +4,9 @@ import { router } from "expo-router";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Blobs from "../../components/Blobs";
+import { ASSUNTOS } from "../../data/conteudos";
 import { TECNICAS, dicaDoDia } from "../../data/tecnicas";
+import { resumo, useTopics } from "../../lib/topics";
 import { useAuth } from "../../lib/auth";
 import { streak, useProgress } from "../../lib/storage";
 import { colors, gradient, radius, shadow } from "../../lib/theme";
@@ -32,6 +34,11 @@ export default function Home() {
   const insets = useSafeAreaInsets();
   const { progress } = useProgress();
   const { user } = useAuth();
+  const { status: topicos } = useTopics();
+  const enem = resumo(
+    ASSUNTOS.map((a) => a.id),
+    topicos,
+  );
   const primeiroNome = user?.name.split(/\s+/)[0] ?? "";
   const dias = streak(progress.studyDays);
   const pctTecnicas = progress.learned.length / TECNICAS.length;
@@ -97,6 +104,32 @@ export default function Home() {
           </View>
         </View>
 
+        {/* Resumo do painel ENEM / SSA */}
+        <Pressable
+          onPress={() => router.push("/progresso")}
+          style={({ pressed }) => [styles.prog, pressed && { opacity: 0.9 }]}
+          accessibilityRole="button"
+        >
+          <LinearGradient
+            colors={gradient.sky}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.progInner}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={styles.progKicker}>PROGRESSO ENEM</Text>
+              <Text style={styles.progValue}>{enem.pct}% dos assuntos</Text>
+              <View style={styles.progTrack}>
+                <View style={[styles.progFill, { width: `${enem.pct}%` }]} />
+              </View>
+              <Text style={styles.progSub}>
+                {enem.dominados} dominados · {enem.estudando} estudando · ver ENEM e SSA →
+              </Text>
+            </View>
+            <Ionicons name="stats-chart" size={34} color="rgba(255,255,255,0.9)" />
+          </LinearGradient>
+        </Pressable>
+
         {/* Atalhos */}
         <Text style={styles.section}>O que vamos fazer hoje?</Text>
         <View style={styles.grid}>
@@ -161,6 +194,19 @@ export default function Home() {
 }
 
 const styles = StyleSheet.create({
+  prog: { marginTop: 14, borderRadius: radius.lg, ...shadow },
+  progInner: { flexDirection: "row", alignItems: "center", gap: 12, padding: 18, borderRadius: radius.lg },
+  progKicker: { color: "rgba(255,255,255,0.9)", fontWeight: "900", fontSize: 12, letterSpacing: 1 },
+  progValue: { color: "#fff", fontWeight: "900", fontSize: 20, marginTop: 2 },
+  progTrack: {
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "rgba(255,255,255,0.3)",
+    marginTop: 10,
+    overflow: "hidden",
+  },
+  progFill: { height: 8, borderRadius: 4, backgroundColor: "#fff" },
+  progSub: { color: "rgba(255,255,255,0.95)", fontSize: 12, marginTop: 8, fontWeight: "600" },
   hero: {
     paddingHorizontal: 20,
     paddingBottom: 28,

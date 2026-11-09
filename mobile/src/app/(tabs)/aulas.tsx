@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
-import { useState } from "react";
+import { router, useLocalSearchParams } from "expo-router";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -21,6 +21,16 @@ export default function Aulas() {
   const [materia, setMateria] = useState<string>(MATERIAS[1].id);
   const [texto, setTexto] = useState("");
   const [busca, setBusca] = useState(MATERIAS[1].busca);
+  const { q } = useLocalSearchParams<{ q?: string }>();
+
+  // Vindo do painel de progresso: já busca o assunto escolhido.
+  useEffect(() => {
+    if (q) {
+      setMateria("");
+      setTexto(q);
+      setBusca(q);
+    }
+  }, [q]);
   const { items, loading, error, retry } = useVideos(busca, "aula");
 
   function buscar() {

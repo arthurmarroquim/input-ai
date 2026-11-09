@@ -184,3 +184,29 @@ export async function ensureAdmin() {
     console.log(`🔑 Senha gerada (aparece só agora, anote e troque depois): ${password}`);
   }
 }
+
+// ---------- Progresso por assunto (ENEM / SSA) ----------
+// status: 0 = a estudar, 1 = estudando, 2 = dominado
+const TOPIC_ID = /^[a-z0-9][a-z0-9.-]{0,99}$/;
+const MAX_TOPICS = 2000;
+
+export function getTopics(userId) {
+  const u = db.users.find((x) => x.id === userId);
+  return u?.topics ?? {};
+}
+
+export async function setTopic(userId, topicId, status) {
+  if (!TOPIC_ID.test(topicId)) return "Assunto inválido.";
+  if (![0, 1, 2].includes(status)) return "Status inválido.";
+  const u = db.users.find((x) => x.id === userId);
+  if (!u) return "Usuário não encontrado.";
+  u.topics ??= {};
+  if (status === 0) delete u.topics[topicId];
+  else {
+    if (!(topicId in u.topics) && Object.keys(u.topics).length >= MAX_TOPICS) return "Limite de assuntos atingido.";
+    u.topics[topicId] = status;
+  }
+  u.topicsUpdatedAt = new Date().toISOString();
+  await persist();
+  return null;
+}

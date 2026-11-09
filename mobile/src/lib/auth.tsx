@@ -2,6 +2,7 @@ import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, 
 import * as api from "./api";
 import { clearToken, readToken, saveToken } from "./session";
 import { setProgressOwner } from "./storage";
+import { resetTopics } from "./topics";
 
 type AuthState = {
   user: api.User | null;
@@ -21,6 +22,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const applySession = useCallback(async (token: string | null, u: api.User | null) => {
     api.setAuthToken(token);
     setProgressOwner(u?.id ?? null);
+    resetTopics();
     setUser(u);
     if (token) await saveToken(token);
     else await clearToken();

@@ -41,7 +41,11 @@ let nextId = 0;
 const uid = () => `${Date.now()}-${nextId++}`;
 
 export default function Tutor() {
-  const { assunto } = useLocalSearchParams<{ assunto?: string }>();
+  const { assunto, topico, exame } = useLocalSearchParams<{
+    assunto?: string;
+    topico?: string;
+    exame?: string;
+  }>();
   const [messages, setMessages] = useState<ChatMessage[]>([BOAS_VINDAS]);
   const [texto, setTexto] = useState("");
   const [imagem, setImagem] = useState<ChatImage | null>(null);
@@ -51,7 +55,11 @@ export default function Tutor() {
 
   useEffect(() => {
     if (assunto) setTexto(`Tenho uma dúvida sobre a aula "${assunto}": `);
-  }, [assunto]);
+    else if (topico)
+      setTexto(
+        `Quero estudar "${topico}"${exame ? ` para o ${exame}` : ""}. Me explique o essencial e depois me faça 3 perguntas para eu testar o que aprendi.`,
+      );
+  }, [assunto, topico, exame]);
 
   async function escolherImagem(origem: "camera" | "galeria") {
     const opts: ImagePicker.ImagePickerOptions = {

@@ -91,3 +91,12 @@ export function youtubeSearchUrl(q: string, tipo: "short" | "aula") {
   const query = tipo === "short" ? `${q} #shorts` : `${q} aula`;
   return `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
 }
+
+// ---------- Progresso por assunto (ENEM / SSA) ----------
+export type TopicStatus = 0 | 1 | 2; // a estudar, estudando, dominado
+export const getTopics = () => request<{ status: Record<string, TopicStatus> }>("/api/topics");
+export const putTopic = (id: string, status: TopicStatus) =>
+  request<{ ok: true }>(`/api/topics/${encodeURIComponent(id)}`, {
+    method: "PUT",
+    body: JSON.stringify({ status }),
+  });
