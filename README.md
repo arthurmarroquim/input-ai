@@ -25,6 +25,9 @@ As chaves de API ficam **só no servidor**. O app nunca vê as chaves.
 
 ## Como rodar
 
+> **Jeito mais fácil:** baixe o projeto e dê dois cliques em `iniciar-windows.bat` (Windows) ou `iniciar-mac.command` (Mac). Passo a passo em [COMO-RODAR.md](COMO-RODAR.md).
+
+
 ### 1. Servidor
 
 ```bash

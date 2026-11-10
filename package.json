@@ -1,0 +1,16 @@
+{
+  "name": "ensina-ai",
+  "private": true,
+  "description": "ENSINA A.I — app de estudos com Tutor IA. Atalhos para rodar tudo no computador.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "configurar": "node -e \"const f=require('fs');if(!f.existsSync('server/.env')){f.copyFileSync('server/.env.example','server/.env');console.log('Criado server/.env: coloque sua chave da Anthropic nele.')}\"",
+    "instalar": "npm run configurar && npm --prefix server ci && npm --prefix mobile ci",
+    "montar-site": "npm --prefix mobile run build:web",
+    "servidor": "npm --prefix server start",
+    "start": "npm run montar-site && npm run servidor",
+    "celular": "npm --prefix mobile start"
+  }
+}

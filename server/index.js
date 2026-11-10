@@ -4,7 +4,10 @@
 // As chaves de API ficam SOMENTE aqui no servidor, nunca no aplicativo.
 import Anthropic from "@anthropic-ai/sdk";
 import express from "express";
+import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import * as auth from "./auth.js";
 
 const PORT = Number(process.env.PORT || 3333);
@@ -396,8 +399,11 @@ function decodeEntities(s = "") {
 
 // Opcional: servir a versão web do app (pasta gerada por `npx expo export --platform web`).
 // Assim app e API ficam no mesmo endereço — útil para testar no navegador do celular.
-if (process.env.WEB_DIR) {
-  const webDir = path.resolve(process.env.WEB_DIR);
+// Sem WEB_DIR, usa ../web-build se existir (gerado por `npm start` na raiz do projeto).
+const WEB_PADRAO = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "web-build");
+const WEB_DIR = process.env.WEB_DIR || (fs.existsSync(path.join(WEB_PADRAO, "index.html")) ? WEB_PADRAO : "");
+if (WEB_DIR) {
+  const webDir = path.resolve(WEB_DIR);
   app.use(express.static(webDir));
   app.use((req, res, next) => {
     if (req.method !== "GET" || req.path.startsWith("/api/")) return next();
@@ -408,7 +414,16 @@ if (process.env.WEB_DIR) {
 await auth.ensureAdmin();
 
 app.listen(PORT, () => {
-  console.log(`ENSINA A.I API rodando em http://localhost:${PORT}`);
+  console.log(`ENSINA A.I rodando em http://localhost:${PORT}`);
+  if (WEB_DIR) {
+    console.log(`\n👉 Abra o app no navegador: http://localhost:${PORT}`);
+    // Endereços para abrir no celular (mesma rede Wi-Fi)
+    const ips = Object.values(os.networkInterfaces())
+      .flat()
+      .filter((i) => i && i.family === "IPv4" && !i.internal)
+      .map((i) => `http://${i.address}:${PORT}`);
+    if (ips.length) console.log(`📱 No celular (mesmo Wi-Fi): ${ips.join("  ou  ")}\n`);
+  }
   console.log(`Tutor IA: modelo ${MODEL}, limite ${LIMITE_DIARIO > 0 ? `${LIMITE_DIARIO} perguntas/aluno/dia` : "sem limite"}`);
   if (!hasAnthropicCredentials) console.warn("⚠️  ANTHROPIC_API_KEY não definida — o Tutor IA não vai responder.");
   if (!YOUTUBE_API_KEY) console.warn("⚠️  YOUTUBE_API_KEY não definida — a busca de vídeos ficará desativada.");
