@@ -7,7 +7,7 @@
   },
   "scripts": {
     "configurar": "node -e \"const f=require('fs');if(!f.existsSync('server/.env')){f.copyFileSync('server/.env.example','server/.env');console.log('Criado server/.env: coloque sua chave da Anthropic nele.')}\"",
-    "instalar": "npm run configurar && npm --prefix server ci && npm --prefix mobile ci",
+    "instalar": "npm run configurar && npm --prefix server install --no-audit --no-fund && npm --prefix mobile install --no-audit --no-fund",
     "montar-site": "npm --prefix mobile run build:web",
     "servidor": "npm --prefix server start",
     "start": "npm run montar-site && npm run servidor",

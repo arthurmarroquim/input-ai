@@ -46,6 +46,12 @@ Com o celular no **mesmo Wi-Fi** do computador, abra no navegador do celular o e
 
 Se não abrir, permita o Node.js no firewall do computador (o Windows costuma perguntar na primeira vez: clique em **Permitir**).
 
+## Se der erro
+
+- **"'expo' não é reconhecido…"**: a instalação do app não terminou. Rode o `iniciar-windows.bat` de novo: ele instala o que faltar. Se continuar, abra a pasta do projeto, clique na barra de endereço do Explorador, digite `cmd` e Enter, e rode `npm --prefix mobile install`. Depois clique no `iniciar-windows.bat` de novo.
+- **"'node' não é reconhecido…"**: instale o Node.js LTS (passo 1) e **reinicie o computador**.
+- **Outra mensagem**: role a janela preta para cima, tire um print da primeira mensagem de erro e mande para o suporte.
+
 ## Comandos (para quem usa o terminal)
 
 ```bash
