@@ -12,6 +12,7 @@
     "servidor": "npm --prefix server start",
     "start": "npm run montar-site && npm run servidor",
     "celular": "npm --prefix mobile start",
-    "resetar-senha-admin": "npm --prefix server run resetar-admin --"
+    "resetar-senha-admin": "npm --prefix server run resetar-admin --",
+    "verificar-seguranca": "npm --prefix server audit --omit=dev && npm --prefix mobile audit --omit=dev"
   }
 }

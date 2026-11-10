@@ -52,6 +52,7 @@ Se não abrir, permita o Node.js no firewall do computador (o Windows costuma pe
 
 - **"'expo' não é reconhecido…"**: a instalação do app não terminou. Rode o `iniciar-windows.bat` de novo: ele instala o que faltar. Se continuar, abra a pasta do projeto, clique na barra de endereço do Explorador, digite `cmd` e Enter, e rode `npm --prefix mobile install`. Depois clique no `iniciar-windows.bat` de novo.
 - **"'node' não é reconhecido…"**: instale o Node.js LTS (passo 1) e **reinicie o computador**.
+- **`npm audit` mostra "ENOLOCK"**: na pasta principal não há bibliotecas para verificar. Use `npm run verificar-seguranca`, que verifica o servidor e o app. Os avisos "moderate" do app vêm de ferramentas da Expo usadas só para montar o app. **Não rode `npm audit fix --force`**: ele troca a versão do Expo e quebra o app.
 - **Outra mensagem**: role a janela preta para cima, tire um print da primeira mensagem de erro e mande para o suporte.
 
 ## Comandos (para quem usa o terminal)
