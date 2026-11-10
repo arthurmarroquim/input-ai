@@ -1,12 +1,15 @@
-# Blueprint do Render (render.com) para o servidor do ENSINA A.I.
+# Blueprint do Render (render.com) para o ENSINA A.I.
+# Um único serviço entrega o SITE (versão web do app) e a API (Tutor IA, login, progresso, vídeos).
 # No Render: New → Blueprint → escolha este repositório. Depois preencha as chaves marcadas com sync: false.
 services:
   - type: web
     name: ensina-ai-api
     runtime: node
-    rootDir: server
-    buildCommand: npm ci --omit=dev
-    startCommand: npm start
+    # Gera a versão web do app (mobile/) e instala o servidor (server/).
+    buildCommand: >-
+      cd mobile && npm ci && CI=1 npx expo export --platform web --output-dir ../web-build &&
+      cd ../server && npm ci --omit=dev
+    startCommand: cd server && node index.js
     healthCheckPath: /api/health
     plan: starter # o disco persistente exige um plano pago
     disk:
@@ -18,6 +21,8 @@ services:
         value: "22"
       - key: DATA_DIR
         value: /var/data
+      - key: WEB_DIR
+        value: ../web-build
       - key: TUTOR_LIMITE_DIARIO
         value: "40"
       - key: ANTHROPIC_API_KEY

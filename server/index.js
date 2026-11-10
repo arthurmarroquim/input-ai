@@ -236,6 +236,13 @@ app.post("/api/tutor", requireAuth, async (req, res) => {
     return res.status(400).json({ error: "A última mensagem precisa ser do aluno." });
   }
 
+  // Sem chave configurada: avisa logo, em vez de um erro genérico da biblioteca.
+  if (!hasAnthropicCredentials) {
+    return res.status(503).json({
+      error: "O Tutor IA ainda não foi ativado neste servidor (falta a chave da IA). Avise o administrador.",
+    });
+  }
+
   // Limite diário por aluno (controle de custo)
   const ilimitado = req.user.role === "admin" || LIMITE_DIARIO <= 0;
   const usadas = auth.usoDoDia(req.user.id).perguntas;

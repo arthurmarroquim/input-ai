@@ -87,14 +87,16 @@ cd ../server && WEB_DIR=../web-build npm start   # app e API em http://SEU_IP:33
 
 A versão final usa o servidor (`server/`) com a chave da Anthropic. O Tutor IA responde aos poucos (streaming), adapta as explicações à série do aluno, tem limite diário de perguntas por aluno (`TUTOR_LIMITE_DIARIO`, padrão 40) e o uso aparece no painel do administrador.
 
-### 1. Servidor na internet (Render)
+### 1. Site + servidor na internet (Render)
+
+Um único serviço entrega o **site** (a versão web do app, que abre em qualquer navegador de celular ou computador) e a **API** do Tutor IA. Depois de publicado, o endereço do Render (ex.: `https://ensina-ai-api.onrender.com`) já abre o app.
 
 1. Crie uma chave em [console.anthropic.com](https://console.anthropic.com) (e, se quiser vídeos, uma chave da YouTube Data API v3).
 2. No [Render](https://render.com): **New → Blueprint** e escolha este repositório. O arquivo `render.yaml` já configura tudo, inclusive um disco para guardar usuários e progresso (o disco exige um plano pago).
 3. Preencha `ANTHROPIC_API_KEY`, `ADMIN_PASSWORD` e, se tiver, `YOUTUBE_API_KEY`.
 4. Quando terminar, abra `https://<seu-servico>.onrender.com/api/health`: deve mostrar `"ai": true`.
 
-Também há um `server/Dockerfile` para qualquer hospedagem com Docker (monte um volume em `/data`).
+Também há um `Dockerfile` na raiz (site + API num só container) e um `server/Dockerfile` (só a API) para qualquer hospedagem com Docker; monte um volume em `/data`.
 
 ### 2. App instalável (EAS)
 
