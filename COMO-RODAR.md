@@ -32,6 +32,8 @@ Na primeira vez, o terminal mostra uma linha assim:
 
 Entre com **admin@ensina.ai** e essa senha. Para escolher a senha, coloque `ADMIN_PASSWORD=SuaSenha123` no arquivo `server/.env` **antes** da primeira vez.
 
+**Esqueceu ou não anotou a senha?** Feche o app e dê dois cliques em **`resetar-senha-admin-windows.bat`** (Windows) ou **`resetar-senha-admin-mac.command`** (Mac). Ele mostra uma senha nova. Para escolher a senha, use o terminal: `npm run resetar-senha-admin -- SuaSenha123`. Os alunos e o progresso não são apagados.
+
 ## 4. Ligar o Tutor IA
 
 1. Crie uma chave em https://console.anthropic.com (API Keys).
