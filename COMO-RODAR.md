@@ -42,6 +42,11 @@ Entre com **admin@ensina.ai** e essa senha. Para escolher a senha, coloque `ADMI
 
 Para os vídeos, coloque também uma chave da YouTube Data API em `YOUTUBE_API_KEY=` (opcional).
 
+## Vídeos do YouTube (ENEM e SSA)
+
+- **Busca automática:** coloque uma chave da **YouTube Data API v3** em `YOUTUBE_API_KEY=` no `server/.env` (crie em https://console.cloud.google.com → APIs → YouTube Data API v3 → Credenciais). A cota gratuita dá cerca de 100 buscas por dia; o app guarda cada busca por 24 h para economizar.
+- **Vídeos indicados (não precisa de chave):** entre como administrador → **Perfil → Vídeos indicados** → cole o link do vídeo do YouTube, escolha a prova (ENEM, SSA 1, 2, 3 ou Todas) e a matéria. Os alunos veem em **Aulas** e **Shorts** com o selo ⭐ Professor.
+
 ## 5. Abrir no celular
 
 Com o celular no **mesmo Wi-Fi** do computador, abra no navegador do celular o endereço que aparece no terminal na linha **📱 No celular**, algo como `http://192.168.0.10:3333`.

@@ -19,7 +19,17 @@ type DemoUser = {
   pass: string;
   topics: Record<string, 1 | 2>;
 };
-type DB = { users: DemoUser[]; sessions: Record<string, string> };
+type DemoVideo = {
+  id: string;
+  youtubeId: string;
+  title: string;
+  channel: string;
+  thumbnail: string;
+  exame: string;
+  materia: string | null;
+  tipo: "aula" | "short";
+};
+type DB = { users: DemoUser[]; sessions: Record<string, string>; videos?: DemoVideo[] };
 
 const KEY = "ensinaai.demo.v1";
 
@@ -264,6 +274,50 @@ export async function demoRequest(
       limite: 0,
       modelo: "Claude do próprio aluno (demonstração)",
     };
+  }
+
+  if (p === "/api/curados" && method === "GET") {
+    needAuth();
+    const ex = url.searchParams.get("exame") || "todas";
+    const lista = db.videos ?? [];
+    return { items: ex === "todas" ? lista : lista.filter((v) => v.exame === ex || v.exame === "todas") };
+  }
+
+  if (p === "/api/admin/curados" && method === "POST") {
+    const u = needAuth();
+    if (u.role !== "admin") throw new DemoError("Acesso só para administradores.", 403);
+    const raw = String(body.url || "").trim();
+    const m =
+      raw.match(/(?:youtu\.be\/|[?&]v=|\/(?:shorts|embed|live)\/)([\w-]{11})/) ?? raw.match(/^([\w-]{11})$/);
+    if (!m) throw new DemoError("Link do YouTube inválido. Cole o endereço do vídeo.", 400);
+    const exame = String(body.exame || "");
+    if (!["todas", "enem", "ssa1", "ssa2", "ssa3"].includes(exame))
+      throw new DemoError("Escolha a prova (ENEM, SSA 1, 2 ou 3).", 400);
+    db.videos ??= [];
+    if (db.videos.some((v) => v.youtubeId === m[1] && v.exame === exame))
+      throw new DemoError("Esse vídeo já foi indicado para essa prova.", 409);
+    const item: DemoVideo = {
+      id: uid(),
+      youtubeId: m[1],
+      title: String(body.titulo || "").trim() || "Vídeo do YouTube",
+      channel: "",
+      thumbnail: `https://i.ytimg.com/vi/${m[1]}/hqdefault.jpg`,
+      exame,
+      materia: body.materia ? String(body.materia) : null,
+      tipo: /\/shorts\//.test(raw) ? "short" : "aula",
+    };
+    db.videos.unshift(item);
+    save(db);
+    return { item };
+  }
+
+  if (p.startsWith("/api/admin/curados/") && method === "DELETE") {
+    const u = needAuth();
+    if (u.role !== "admin") throw new DemoError("Acesso só para administradores.", 403);
+    const id = p.slice("/api/admin/curados/".length);
+    db.videos = (db.videos ?? []).filter((v) => v.id !== id);
+    save(db);
+    return { ok: true };
   }
 
   if (p === "/api/videos") {

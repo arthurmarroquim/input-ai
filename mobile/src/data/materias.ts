@@ -12,5 +12,6 @@ export const MATERIAS: Materia[] = [
   { id: "historia", nome: "História", emoji: "🏛️", busca: "história" },
   { id: "geografia", nome: "Geografia", emoji: "🌎", busca: "geografia" },
   { id: "ingles", nome: "Inglês", emoji: "🇬🇧", busca: "inglês para iniciantes" },
-  { id: "enem", nome: "ENEM", emoji: "🎯", busca: "ENEM dicas" },
+  { id: "enem", nome: "ENEM", emoji: "🎯", busca: "ENEM dicas e resolução de questões" },
+  { id: "ssa", nome: "SSA (UPE)", emoji: "🏫", busca: "SSA UPE dicas e resolução de questões" },
 ];

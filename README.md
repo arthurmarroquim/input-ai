@@ -8,6 +8,7 @@ Aplicativo para celular que ajuda estudantes a **aprenderem a estudar**, com:
 - **Painel de progresso ENEM e SSA**: o aluno marca cada assunto como *a estudar*, *estudando* ou *dominado* e acompanha o progresso por área do ENEM e por fase do SSA (UPE: SSA 1, 2 e 3), com sugestão do próximo assunto e atalhos para o Tutor IA e as videoaulas. Os 140 assuntos ficam em `mobile/src/data/conteudos.ts` (confira e ajuste conforme a matriz do ENEM e o edital do SSA do ano).
 - **Aprenda a estudar**: técnicas explicadas passo a passo (Pomodoro, recordação ativa, repetição espaçada, Feynman, mapa mental, intercalação e planejamento), dica do dia e progresso (dias seguidos, minutos de foco, técnicas aprendidas).
 - **Pomodoro**: timer de foco/pausa que registra seu tempo de estudo.
+- **Vídeos para ENEM e SSA**: Shorts e Videoaulas têm um seletor de prova (ENEM, SSA 1, 2, 3) que começa pela série do aluno e foca a busca no YouTube nessa prova. O administrador indica vídeos (cola o link do YouTube em *Perfil → Vídeos indicados*), que aparecem em destaque com o selo ⭐ Professor. As buscas ficam guardadas por 24 h para economizar a cota do YouTube.
 - **Shorts**: feed vertical de vídeos curtos do YouTube por matéria. Deslize para ver o próximo.
 - **Videoaulas**: busca de aulas do YouTube por matéria ou assunto, com player no app e dicas de como assistir para aprender.
 - **Tutor IA com câmera**: tire uma foto do exercício, do caderno ou da lousa e a IA (Claude, da Anthropic) reconhece o conteúdo e ajuda:
@@ -121,6 +122,7 @@ Tutor e vídeos exigem login (`Authorization: Bearer <token>`).
 - `POST /api/auth/register` `{ name, email, password, serie }` e `POST /api/auth/login` `{ email, password }` → `{ token, user }`
 - `GET /api/auth/me`, `PATCH /api/auth/me` `{ serie?: 1 | 2 | 3 | "concluido", name? }`, `POST /api/auth/logout`, `POST /api/auth/password` `{ currentPassword, newPassword }`
 - Progresso: `GET /api/topics` → `{ status: { [assuntoId]: 1 | 2 } }`, `PUT /api/topics/:id` `{ status: 0 | 1 | 2 }`
+- Vídeos indicados: `GET /api/curados?exame=enem|ssa1|ssa2|ssa3|todas`; admin: `POST /api/admin/curados` `{ url, titulo?, exame, materia? }`, `DELETE /api/admin/curados/:id`. Busca: `GET /api/videos?tipo=aula|short&q=...&exame=enem|ssa1|ssa2|ssa3`
 - Admin: `GET /api/admin/users`, `PATCH /api/admin/users/:id` `{ role: "aluno" | "admin" }`, `DELETE /api/admin/users/:id`
 
 - `GET /api/health`: diz quais integrações estão configuradas.

@@ -1,4 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -112,6 +113,15 @@ export default function Admin() {
             <Stat value={novos7d} label="novos (7 dias)" />
           </View>
           {uso && <UsoTutor uso={uso} />}
+          <Pressable
+            onPress={() => router.push("/admin-videos")}
+            style={styles.videosBtn}
+            accessibilityRole="button"
+          >
+            <Ionicons name="logo-youtube" size={20} color={colors.primary} />
+            <Text style={styles.videosText}>Vídeos indicados para ENEM e SSA</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.primary} />
+          </Pressable>
           <View style={styles.search}>
             <Ionicons name="search" size={18} color={colors.primary} />
             <TextInput
@@ -220,6 +230,15 @@ function Stat({ value, label }: { value: number; label: string }) {
 }
 
 const styles = StyleSheet.create({
+  videosBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    padding: 14,
+    borderRadius: radius.lg,
+    backgroundColor: colors.primarySoft,
+  },
+  videosText: { flex: 1, color: colors.primaryDark, fontWeight: "800" },
   uso: {
     borderRadius: radius.lg,
     padding: 14,

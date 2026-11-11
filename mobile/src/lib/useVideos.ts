@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
-import { searchVideos, Video } from "./api";
+import { listCurados, searchVideos, Video, VideoCurado } from "./api";
+import type { ExameFoco } from "./exameFoco";
 
-export function useVideos(query: string, tipo: "short" | "aula") {
+/** Busca no YouTube (pelo servidor), já focada na prova escolhida. */
+export function useVideos(query: string, tipo: "short" | "aula", exame?: ExameFoco) {
   const [items, setItems] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -11,7 +13,7 @@ export function useVideos(query: string, tipo: "short" | "aula") {
     let alive = true;
     setLoading(true);
     setError(null);
-    searchVideos(query, tipo)
+    searchVideos(query, tipo, exame)
       .then((v) => alive && setItems(v))
       .catch((e: Error) => {
         if (!alive) return;
@@ -22,7 +24,22 @@ export function useVideos(query: string, tipo: "short" | "aula") {
     return () => {
       alive = false;
     };
-  }, [query, tipo, attempt]);
+  }, [query, tipo, exame, attempt]);
 
   return { items, loading, error, retry: () => setAttempt((n) => n + 1) };
+}
+
+/** Vídeos indicados pelo professor para a prova (inclui os marcados para "todas"). */
+export function useCurados(exame: ExameFoco, tipo?: "aula" | "short") {
+  const [items, setItems] = useState<VideoCurado[]>([]);
+  useEffect(() => {
+    let alive = true;
+    listCurados(exame)
+      .then((v) => alive && setItems(tipo ? v.filter((x) => x.tipo === tipo) : v))
+      .catch(() => alive && setItems([]));
+    return () => {
+      alive = false;
+    };
+  }, [exame, tipo]);
+  return items;
 }

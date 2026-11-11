@@ -2,12 +2,14 @@ import { useIsFocused } from "expo-router";
 import { useCallback, useRef, useState } from "react";
 import { ActivityIndicator, FlatList, Image, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import ExameChips from "../../components/ExameChips";
 import MateriaChips from "../../components/MateriaChips";
 import VideosIndisponiveis from "../../components/VideosIndisponiveis";
 import YouTubePlayer from "../../components/YouTubePlayer";
 import { MATERIAS } from "../../data/materias";
 import { Video } from "../../lib/api";
-import { useVideos } from "../../lib/useVideos";
+import { useExameFoco } from "../../lib/exameFoco";
+import { useCurados, useVideos } from "../../lib/useVideos";
 
 // Feed vertical de vídeos curtos: deslize para cima para o próximo.
 export default function Shorts() {
@@ -16,7 +18,20 @@ export default function Shorts() {
   const [materia, setMateria] = useState(MATERIAS[0]);
   const [height, setHeight] = useState(0);
   const [ativo, setAtivo] = useState(0);
-  const { items, loading, error, retry } = useVideos(materia.busca, "short");
+  const { exame, setExame } = useExameFoco();
+  const busca = useVideos(materia.busca, "short", exame);
+  const curados = useCurados(exame, "short");
+  const { loading, error, retry } = busca;
+  // Shorts indicados pelo professor vêm primeiro; depois os da busca (sem repetir).
+  const items: Video[] = [
+    ...curados.map((c) => ({
+      id: c.youtubeId,
+      title: `⭐ ${c.title}`,
+      channel: c.channel || "Indicado pelo professor",
+      thumbnail: c.thumbnail,
+    })),
+    ...busca.items.filter((v) => !curados.some((c) => c.youtubeId === v.id)),
+  ];
 
   const onViewable = useRef(({ viewableItems }: { viewableItems: { index?: number | null }[] }) => {
     if (viewableItems[0]?.index != null) setAtivo(viewableItems[0].index);
@@ -43,18 +58,24 @@ export default function Shorts() {
 
   return (
     <View style={styles.page} onLayout={(e) => setHeight(e.nativeEvent.layout.height)}>
-      {loading ? (
+      {loading && items.length === 0 ? (
         <ActivityIndicator color="#fff" size="large" style={{ flex: 1 }} />
-      ) : error ? (
+      ) : error && items.length === 0 ? (
         <View style={{ flex: 1, paddingTop: insets.top + 56 }}>
-          <VideosIndisponiveis error={error} query={materia.busca} tipo="short" onRetry={retry} dark />
+          <VideosIndisponiveis
+            error={error}
+            query={`${materia.busca} ${exame === "enem" ? "ENEM" : `SSA ${exame.slice(3)} UPE`}`}
+            tipo="short"
+            onRetry={retry}
+            dark
+          />
         </View>
       ) : items.length === 0 ? (
         <Text style={[styles.empty, { paddingTop: insets.top + 80 }]}>Nenhum vídeo encontrado.</Text>
       ) : (
         height > 0 && (
           <FlatList
-            key={materia.id}
+            key={`${materia.id}-${exame}`}
             data={items}
             keyExtractor={(v) => v.id}
             renderItem={renderItem}
@@ -72,6 +93,14 @@ export default function Shorts() {
           selected={materia.id}
           onSelect={(m) => {
             setMateria(m);
+            setAtivo(0);
+          }}
+          dark
+        />
+        <ExameChips
+          value={exame}
+          onChange={(e) => {
+            setExame(e);
             setAtivo(0);
           }}
           dark

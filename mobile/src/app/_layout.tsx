@@ -51,6 +51,7 @@ function RootStack() {
         <Stack.Screen name="assunto/[id]" options={{ title: "Assunto" }} />
         <Stack.Protected guard={user?.role === "admin"}>
           <Stack.Screen name="admin" options={{ title: "Painel do administrador" }} />
+          <Stack.Screen name="admin-videos" options={{ title: "Vídeos indicados" }} />
         </Stack.Protected>
       </Stack.Protected>
     </Stack>

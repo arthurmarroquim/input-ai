@@ -273,3 +273,29 @@ export function resumoUso() {
   );
   return { dias, porUsuarioHoje };
 }
+
+// ---------- Vídeos indicados pelo professor (ENEM / SSA) ----------
+// db.videos = [{ id, youtubeId, titulo, canal, exame, materia, tipo, criadoEm, criadoPor }]
+export const EXAMES_VIDEO = ["todas", "enem", "ssa1", "ssa2", "ssa3"];
+
+export function listarVideos(exame) {
+  const todos = db.videos ?? [];
+  const lista = exame && exame !== "todas" ? todos.filter((v) => v.exame === exame || v.exame === "todas") : todos;
+  return [...lista].sort((a, b) => b.criadoEm.localeCompare(a.criadoEm));
+}
+
+export async function adicionarVideo(video) {
+  db.videos ??= [];
+  if (db.videos.length >= 500) throw new Error("Limite de 500 vídeos indicados atingido.");
+  const v = { id: crypto.randomUUID(), criadoEm: new Date().toISOString(), ...video };
+  db.videos.push(v);
+  await persist();
+  return v;
+}
+
+export async function removerVideo(id) {
+  const antes = (db.videos ?? []).length;
+  db.videos = (db.videos ?? []).filter((v) => v.id !== id);
+  await persist();
+  return db.videos.length < antes;
+}

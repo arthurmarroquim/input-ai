@@ -99,6 +99,14 @@ export default function Perfil() {
           strong
         />
       )}
+      {user.role === "admin" && (
+        <Item
+          icon="logo-youtube"
+          label="Vídeos indicados"
+          sub="Vídeos do YouTube para ENEM e SSA"
+          onPress={() => router.push("/admin-videos")}
+        />
+      )}
       <Item
         icon="document-text-outline"
         label="Minha série na BNCC"

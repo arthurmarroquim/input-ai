@@ -194,10 +194,35 @@ export type UsoAdmin = {
 };
 export const adminUso = () => request<UsoAdmin>("/api/admin/uso");
 
-export async function searchVideos(q: string, tipo: "short" | "aula"): Promise<Video[]> {
-  const data = await request<{ items: Video[] }>(`/api/videos?tipo=${tipo}&q=${encodeURIComponent(q)}`);
+export async function searchVideos(q: string, tipo: "short" | "aula", exame?: string): Promise<Video[]> {
+  const data = await request<{ items: Video[] }>(
+    `/api/videos?tipo=${tipo}&q=${encodeURIComponent(q)}${exame ? `&exame=${exame}` : ""}`,
+  );
   return data.items;
 }
+
+// ---------- Vídeos indicados pelo professor ----------
+export type ExameVideo = "todas" | "enem" | "ssa1" | "ssa2" | "ssa3";
+export type VideoCurado = {
+  id: string; // id interno da indicação
+  youtubeId: string;
+  title: string;
+  channel: string;
+  thumbnail: string;
+  exame: ExameVideo;
+  materia: string | null;
+  tipo: "aula" | "short";
+};
+export const listCurados = (exame: ExameVideo = "todas") =>
+  request<{ items: VideoCurado[] }>(`/api/curados?exame=${exame}`).then((d) => d.items);
+export const adminAddCurado = (dados: {
+  url: string;
+  titulo?: string;
+  exame: ExameVideo;
+  materia?: string | null;
+}) => post<{ item: VideoCurado }>("/api/admin/curados", dados).then((d) => d.item);
+export const adminDelCurado = (id: string) =>
+  request<{ ok: true }>(`/api/admin/curados/${id}`, { method: "DELETE" });
 
 export function youtubeSearchUrl(q: string, tipo: "short" | "aula") {
   const query = tipo === "short" ? `${q} #shorts` : `${q} aula`;

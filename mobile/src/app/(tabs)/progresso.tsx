@@ -111,7 +111,7 @@ export default function Progresso() {
     });
   }
   function verAulas(a: Assunto) {
-    router.push({ pathname: "/aulas", params: { q: `${a.nome} ${materiaPorId[a.materia].nome}` } });
+    router.push({ pathname: "/aulas", params: { q: `${a.nome} ${materiaPorId[a.materia].nome}`, exame } });
   }
 
   return (

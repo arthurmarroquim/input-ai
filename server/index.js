@@ -15,6 +15,7 @@ const MODEL = process.env.TUTOR_MODEL || "claude-opus-5-5";
 // Perguntas por aluno por dia (administradores não têm limite). 0 = sem limite.
 const LIMITE_DIARIO = Number(process.env.TUTOR_LIMITE_DIARIO ?? 40);
 const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY || "";
+const YOUTUBE_API_BASE = process.env.YOUTUBE_API_BASE || "https://www.googleapis.com"; // troca só em testes
 const hasAnthropicCredentials = Boolean(
   process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN,
 );
@@ -342,19 +343,32 @@ app.get("/api/tutor/uso", requireAuth, (req, res) => {
   res.json({ usadas, limite: ilimitado ? null : LIMITE_DIARIO, restantes: ilimitado ? null : Math.max(0, LIMITE_DIARIO - usadas) });
 });
 
+// Foco da busca por prova: o termo é somado ao assunto pesquisado no YouTube.
+const TERMO_EXAME = { enem: "ENEM", ssa1: "SSA 1 UPE", ssa2: "SSA 2 UPE", ssa3: "SSA 3 UPE" };
+
+// Memória das buscas (24 h): a cota gratuita da YouTube Data API permite só ~100 buscas por dia.
+const CACHE_VIDEOS = new Map();
+const CACHE_TTL = 24 * 60 * 60 * 1000;
+
 app.get("/api/videos", requireAuth, async (req, res) => {
   const q = String(req.query.q || "").trim().slice(0, 100);
   const tipo = req.query.tipo === "short" ? "short" : "aula";
+  const termoExame = TERMO_EXAME[String(req.query.exame || "")] || "";
   if (!q) return res.status(400).json({ error: "Informe o assunto (q)." });
   if (!YOUTUBE_API_KEY) {
     return res.status(503).json({ error: "YOUTUBE_API_KEY não configurada no servidor." });
   }
 
+  const busca = [q, termoExame].filter(Boolean).join(" ");
+  const chave = `${tipo}|${busca.toLowerCase()}`;
+  const guardado = CACHE_VIDEOS.get(chave);
+  if (guardado && Date.now() - guardado.em < CACHE_TTL) return res.json({ items: guardado.items });
+
   const params = new URLSearchParams({
     part: "snippet",
     type: "video",
     maxResults: "15",
-    q: tipo === "short" ? `${q} #shorts` : `${q} aula`,
+    q: tipo === "short" ? `${busca} #shorts` : `${busca} aula`,
     videoDuration: tipo === "short" ? "short" : "medium",
     videoEmbeddable: "true",
     safeSearch: "strict",
@@ -364,10 +378,15 @@ app.get("/api/videos", requireAuth, async (req, res) => {
   });
 
   try {
-    const r = await fetch(`https://www.googleapis.com/youtube/v3/search?${params}`);
+    const r = await fetch(`${YOUTUBE_API_BASE}/youtube/v3/search?${params}`);
     if (!r.ok) {
       console.error("[videos]", r.status, await r.text());
-      return res.status(502).json({ error: "Não foi possível buscar vídeos agora." });
+      const cota = r.status === 403;
+      return res.status(502).json({
+        error: cota
+          ? "O limite diário de buscas no YouTube acabou. Veja os vídeos indicados pelo professor ou tente amanhã."
+          : "Não foi possível buscar vídeos agora.",
+      });
     }
     const data = await r.json();
     const items = (data.items || [])
@@ -381,11 +400,93 @@ app.get("/api/videos", requireAuth, async (req, res) => {
           it.snippet.thumbnails?.medium?.url ||
           `https://i.ytimg.com/vi/${it.id.videoId}/hqdefault.jpg`,
       }));
+    if (CACHE_VIDEOS.size > 500) CACHE_VIDEOS.delete(CACHE_VIDEOS.keys().next().value);
+    CACHE_VIDEOS.set(chave, { em: Date.now(), items });
     return res.json({ items });
   } catch (error) {
     console.error("[videos]", error);
     return res.status(502).json({ error: "Não foi possível buscar vídeos agora." });
   }
+});
+
+// ---------- Vídeos indicados pelo professor ----------
+
+/** Extrai o ID de 11 caracteres de um link do YouTube (watch, youtu.be, shorts, embed, live) ou do próprio ID. */
+function idDoYoutube(entrada) {
+  const s = String(entrada || "").trim();
+  if (/^[\w-]{11}$/.test(s)) return { id: s, short: false };
+  let u;
+  try {
+    u = new URL(s.startsWith("http") ? s : `https://${s}`);
+  } catch {
+    return null;
+  }
+  const host = u.hostname.replace(/^www\.|^m\./, "");
+  let id = null;
+  if (host === "youtu.be") id = u.pathname.slice(1, 12);
+  else if (host.endsWith("youtube.com") || host === "youtube-nocookie.com") {
+    id = u.searchParams.get("v") || u.pathname.match(/\/(?:shorts|embed|live|v)\/([\w-]{11})/)?.[1] || null;
+  }
+  return id && /^[\w-]{11}$/.test(id) ? { id, short: u.pathname.startsWith("/shorts/") } : null;
+}
+
+/** Título e canal pelo oEmbed do YouTube (não precisa de chave). */
+async function dadosDoVideo(youtubeId) {
+  try {
+    const r = await fetch(
+      `https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(`https://www.youtube.com/watch?v=${youtubeId}`)}`,
+      { signal: AbortSignal.timeout(6000) },
+    );
+    if (!r.ok) return null;
+    const d = await r.json();
+    return { titulo: String(d.title || ""), canal: String(d.author_name || "") };
+  } catch {
+    return null;
+  }
+}
+
+const publicVideo = (v) => ({
+  id: v.id,
+  youtubeId: v.youtubeId,
+  title: v.titulo,
+  channel: v.canal,
+  thumbnail: `https://i.ytimg.com/vi/${v.youtubeId}/hqdefault.jpg`,
+  exame: v.exame,
+  materia: v.materia || null,
+  tipo: v.tipo,
+});
+
+app.get("/api/curados", requireAuth, (req, res) => {
+  const exame = auth.EXAMES_VIDEO.includes(String(req.query.exame)) ? String(req.query.exame) : "todas";
+  res.json({ items: auth.listarVideos(exame).map(publicVideo) });
+});
+
+app.post("/api/admin/curados", requireAuth, requireAdmin, async (req, res) => {
+  const { url, titulo, exame, materia } = req.body || {};
+  const yt = idDoYoutube(url);
+  if (!yt) return res.status(400).json({ error: "Link do YouTube inválido. Cole o endereço do vídeo." });
+  if (!auth.EXAMES_VIDEO.includes(exame)) return res.status(400).json({ error: "Escolha a prova (ENEM, SSA 1, 2 ou 3)." });
+  if (auth.listarVideos().some((v) => v.youtubeId === yt.id && v.exame === exame)) {
+    return res.status(409).json({ error: "Esse vídeo já foi indicado para essa prova." });
+  }
+  const meta = await dadosDoVideo(yt.id);
+  const tituloFinal = String(titulo || "").trim().slice(0, 150) || meta?.titulo || "Vídeo do YouTube";
+  const v = await auth.adicionarVideo({
+    youtubeId: yt.id,
+    titulo: tituloFinal,
+    canal: meta?.canal || "",
+    exame,
+    materia: materia ? String(materia).slice(0, 40) : null,
+    tipo: yt.short ? "short" : "aula",
+    criadoPor: req.user.id,
+  });
+  res.status(201).json({ item: publicVideo(v) });
+});
+
+app.delete("/api/admin/curados/:id", requireAuth, requireAdmin, async (req, res) => {
+  const ok = await auth.removerVideo(req.params.id);
+  if (!ok) return res.status(404).json({ error: "Vídeo não encontrado." });
+  res.json({ ok: true });
 });
 
 function decodeEntities(s = "") {
