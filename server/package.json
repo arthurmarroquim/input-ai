@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node --env-file-if-exists=.env index.js",
     "dev": "node --env-file-if-exists=.env --watch index.js",
-    "resetar-admin": "node --env-file-if-exists=.env resetar-admin.js"
+    "resetar-admin": "node --env-file-if-exists=.env resetar-admin.js",
+    "ativar-ia": "node --env-file-if-exists=.env ativar-ia.js",
+    "testar-ia": "node --env-file-if-exists=.env ativar-ia.js --testar"
   },
   "keywords": [],
   "author": "",

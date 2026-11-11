@@ -36,11 +36,12 @@ Entre com **admin@ensina.ai** e essa senha. Para escolher a senha, coloque `ADMI
 
 ## 4. Ligar o Tutor IA
 
-1. Crie uma chave em https://console.anthropic.com (API Keys).
-2. Abra o arquivo **`server/.env`** (no Bloco de Notas) e cole a chave depois de `ANTHROPIC_API_KEY=`.
-3. Feche e abra o app de novo.
+1. Crie uma chave em https://console.anthropic.com → **API Keys** → **Create Key** e copie (começa com `sk-ant-`). A conta precisa ter créditos (menu **Billing**).
+2. Dê dois cliques em **`ativar-tutor-ia-windows.bat`** (Windows) ou **`ativar-tutor-ia-mac.command`** (Mac).
+3. Cole a chave (no Windows, clique com o botão direito do mouse para colar) e aperte **Enter**.
+4. Ele testa na hora. Se aparecer **"✅ A IA respondeu"**, o Tutor está ativo: feche a janela preta do app (se estiver aberta) e abra de novo pelo `iniciar-windows.bat`.
 
-Para os vídeos, coloque também uma chave da YouTube Data API em `YOUTUBE_API_KEY=` (opcional).
+Se a chave estiver errada, nada é gravado. Para só conferir a chave já gravada: `npm run testar-ia`.
 
 ## Vídeos do YouTube (ENEM e SSA)
 
